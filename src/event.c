@@ -100,6 +100,7 @@ static void tcp_broken_events(adns_state ads) {
 void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
   int r, fd, tries;
   struct sockaddr_in addr;
+  struct sockaddr_in6 addr6;
   struct protoent *proto;
 
   for (tries=0; tries<ads->nservers; tries++) {
@@ -135,11 +136,19 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
       close(fd);
       return;
     }
-    memset(&addr,0,sizeof(addr));
-    addr.sin_family= AF_INET;
-    addr.sin_port= htons(DNS_PORT);
-    addr.sin_addr= ads->servers[ads->tcpserver].addr;
-    r= connect(fd,(const struct sockaddr*)&addr,sizeof(addr));
+    if(ads->servers[ads->tcpserver].sin_family==AF_INET) {
+      memset(&addr,0,sizeof(addr));
+      addr.sin_family= AF_INET;
+      addr.sin_port= htons(DNS_PORT);
+      addr.sin_addr= ads->servers[ads->tcpserver].addr;
+      r= connect(fd,(const struct sockaddr*)&addr,sizeof(addr));
+    } else {
+      memset(&addr6,0,sizeof(addr6));
+      addr6.sin6_family= AF_INET6;
+      addr6.sin6_port= htons(DNS_PORT);
+      addr6.sin6_addr= ads->servers[ads->tcpserver].addr6;
+      r= connect(fd,(const struct sockaddr*)&addr6,sizeof(addr6));
+    }
     ads->tcpsocket= fd;
     ads->tcpstate= server_connecting;
     if (r==0) { tcp_connected(ads,now); return; }
