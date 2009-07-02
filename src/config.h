@@ -13,6 +13,9 @@
 /* Define if printf-format argument lists a la GCC are available.  */
 #define HAVE_GNUC25_PRINTFFORMAT 1
 
+/* Define if we want to include rpc/types.h.  Crap BSDs put INADDR_LOOPBACK there. */
+/* #undef HAVEUSE_RPCTYPES_H */
+
 /* Define if you have the poll function.  */
 #define HAVE_POLL 1
 
@@ -82,4 +85,8 @@ struct pollfd { int fd; short events; short revents; };
 #endif
 #ifndef CONSTANT
 #define CONSTANT FUNCATTR((ATTRCONST))
+#endif
+
+#ifdef HAVEUSE_RPCTYPES_H
+#include <rpc/types.h>
 #endif

@@ -2,7 +2,12 @@ m4_dnl hcommon.c
 m4_dnl (part of complex test harness, not of the library)
 m4_dnl - routines used for both record and playback
 
-m4_dnl  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+m4_dnl  This file is
+m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+m4_dnl
+m4_dnl  It is part of adns, which is
+m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+m4_dnl    Copyright (C) 1999 Tony Finch <dot@dotat.at>
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
 m4_dnl  it under the terms of the GNU General Public License as published by
@@ -177,8 +182,8 @@ void Tvberrno(int e) {
   const struct Terrno *te;
 
   for (te= Terrnos; te->n && te->v != e; te++);
-  if (te->n) Tvba(te->n);
-  else Tvbf("E#%d",e);
+  assert(te->n);
+  Tvba(te->n);
 }
 
 void Tvba(const char *str) {

@@ -71,8 +71,8 @@ static int Perrno(const char *stuff) {
   char *ep;
   for (te= Terrnos; te->n && strcmp(te->n,stuff); te++);
   if (te->n) return te->v;
-  r= strtoul(stuff+1,&ep,10);
-  if (ep) Psyntax("errno value not recognised, not numeric");
+  r= strtoul(stuff+2,&ep,10);
+  if (*ep) Psyntax("errno value not recognised, not numeric");
   return r;
 }
 static void P_updatetime(void) {

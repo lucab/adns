@@ -5,7 +5,12 @@
  * - query submission and cancellation (user-visible and internal)
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,7 +32,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
 
 #include <sys/time.h>
 
@@ -101,7 +105,6 @@ static void query_submit(adns_state ads, adns_query qu,
   memcpy(qu->query_dgram,qu->vb.buf,qu->vb.used);
   
   adns__query_send(qu,now);
-  adns__autosys(ads,now);
 }
 
 adns_status adns__internal_submit(adns_state ads, adns_query *query_r,
@@ -192,7 +195,7 @@ static int save_owner(adns_query qu, const char *owner, int ol) {
 int adns_submit(adns_state ads,
 		const char *owner,
 		adns_rrtype type,
-		adns_queryflags flags,
+		int flags,
 		void *context,
 		adns_query *query_r) {
   int r, ol, ndots;
@@ -201,6 +204,8 @@ int adns_submit(adns_state ads,
   struct timeval now;
   adns_query qu;
   const char *p;
+
+  adns__consistency(ads,0,cc_entex);
 
   typei= adns__findtype(type);
   if (!typei) return ENOSYS;
@@ -237,22 +242,47 @@ int adns_submit(adns_state ads,
     }
     query_simple(ads,qu, owner,ol, typei,flags, now);
   }
+  adns__autosys(ads,now);
+  adns__consistency(ads,qu,cc_entex);
   return 0;
 
  x_adnsfail:
   adns__query_fail(qu,stat);
+  adns__consistency(ads,qu,cc_entex);
   return 0;
 
  x_errno:
   r= errno;
   assert(r);
+  adns__consistency(ads,0,cc_entex);
   return r;
+}
+
+int adns_submit_reverse(adns_state ads,
+			const struct sockaddr *addr,
+			adns_rrtype type,
+			int flags,
+			void *context,
+			adns_query *query_r) {
+  const unsigned char *iaddr;
+  char buf[30];
+
+  if (type != adns_r_ptr && type != adns_r_ptr_raw) return EINVAL;
+  flags &= ~adns_qf_search;
+
+  if (addr->sa_family != AF_INET) return ENOSYS;
+  iaddr= (const unsigned char*) &(((const struct sockaddr_in*)addr) -> sin_addr);
+
+  sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
+	  iaddr[3], iaddr[2], iaddr[1], iaddr[0]);
+
+  return adns_submit(ads,buf,type,flags,context,query_r);
 }
 
 int adns_synchronous(adns_state ads,
 		     const char *owner,
 		     adns_rrtype type,
-		     adns_queryflags flags,
+		     int flags,
 		     adns_answer **answer_r) {
   adns_query qu;
   int r;
@@ -342,7 +372,6 @@ static void cancel_children(adns_query qu) {
     ncqu= cqu->siblings.next;
     adns_cancel(cqu);
   }
-  LIST_INIT(qu->children);
 }
 
 void adns__reset_preserved(adns_query qu) {
@@ -358,19 +387,25 @@ static void free_query_allocs(adns_query qu) {
 
   cancel_children(qu);
   for (an= qu->allocations.head; an; an= ann) { ann= an->next; free(an); }
+  LIST_INIT(qu->allocations);
   adns__vbuf_free(&qu->vb);
 }
 
 void adns_cancel(adns_query qu) {
+  adns_state ads;
+
+  ads= qu->ads;
+  adns__consistency(ads,qu,cc_entex);
+  if (qu->parent) LIST_UNLINK_PART(qu->parent->children,qu,siblings.);
   switch (qu->state) {
   case query_tosend: case query_tcpwait: case query_tcpsent:
-    LIST_UNLINK(qu->ads->timew,qu);
+    LIST_UNLINK(ads->timew,qu);
     break;
   case query_child:
-    LIST_UNLINK(qu->ads->childw,qu);
+    LIST_UNLINK(ads->childw,qu);
     break;
   case query_done:
-    LIST_UNLINK(qu->ads->output,qu);
+    LIST_UNLINK(ads->output,qu);
     break;
   default:
     abort();
@@ -378,6 +413,7 @@ void adns_cancel(adns_query qu) {
   free_query_allocs(qu);
   free(qu->answer);
   free(qu);
+  adns__consistency(ads,0,cc_entex);
 }
 
 void adns__update_expires(adns_query qu, unsigned long ttl, struct timeval now) {
@@ -464,6 +500,7 @@ void adns__query_done(adns_query qu) {
   } else {
     makefinal_query(qu);
     LIST_LINK_TAIL(qu->ads->output,qu);
+    qu->state= query_done;
   }
 }
 

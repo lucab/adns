@@ -3,7 +3,12 @@
  * - wrappers for poll(2)
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +26,7 @@
  */
 
 #include <limits.h>
+#include <string.h>
 
 #include "internal.h"
 
@@ -29,12 +35,14 @@
 int adns_beforepoll(adns_state ads, struct pollfd *fds, int *nfds_io, int *timeout_io,
 		    const struct timeval *now) {
   struct timeval tv_nowbuf, tv_tobuf, *tv_to;
-  int space, found, timeout_ms;
+  int space, found, timeout_ms, r;
   struct pollfd fds_tmp[MAX_POLLFDS];
+
+  adns__consistency(ads,0,cc_entex);
 
   if (timeout_io) {
     adns__must_gettimeofday(ads,&now,&tv_nowbuf);
-    if (!now) { *nfds_io= 0; return 0; }
+    if (!now) { *nfds_io= 0; r= 0; goto xit; }
 
     timeout_ms= *timeout_io;
     if (timeout_ms == -1) {
@@ -65,21 +73,59 @@ int adns_beforepoll(adns_state ads, struct pollfd *fds, int *nfds_io, int *timeo
   } else {
     found= adns__pollfds(ads,fds_tmp);
     *nfds_io= found;
-    if (space < found) return ERANGE;
+    if (space < found) { r= ERANGE; goto xit; }
     memcpy(fds,fds_tmp,sizeof(struct pollfd)*found);
   }
-  return 0;
+  r= 0;
+xit:
+  adns__consistency(ads,0,cc_entex);
+  return r;
 }
 
 void adns_afterpoll(adns_state ads, const struct pollfd *fds, int nfds,
 		    const struct timeval *now) {
   struct timeval tv_buf;
 
+  adns__consistency(ads,0,cc_entex);
   adns__must_gettimeofday(ads,&now,&tv_buf);
-  if (!now) return;
+  if (now) {
+    adns__timeouts(ads, 1, 0,0, *now);
+    adns__fdevents(ads, fds,nfds, 0,0,0,0, *now,0);
+  }
+  adns__consistency(ads,0,cc_entex);
+}
 
-  adns__timeouts(ads, 1, 0,0, *now);
-  adns__fdevents(ads, fds,nfds, 0,0,0,0, *now,0);
+int adns_wait_poll(adns_state ads,
+		   adns_query *query_io,
+		   adns_answer **answer_r,
+		   void **context_r) {
+  int r, nfds, to;
+  struct pollfd fds[MAX_POLLFDS];
+  
+  adns__consistency(ads,0,cc_entex);
+
+  for (;;) {
+    r= adns__internal_check(ads,query_io,answer_r,context_r);
+    if (r != EAGAIN) goto xit;
+    nfds= MAX_POLLFDS; to= -1;
+    adns_beforepoll(ads,fds,&nfds,&to,0);
+    r= poll(fds,nfds,to);
+    if (r == -1) {
+      if (errno == EINTR) {
+	if (ads->iflags & adns_if_eintr) { r= EINTR; goto xit; }
+      } else {
+	adns__diag(ads,-1,0,"poll failed in wait: %s",strerror(errno));
+	adns_globalsystemfailure(ads);
+      }
+    } else {
+      assert(r >= 0);
+      adns_afterpoll(ads,fds,nfds,0);
+    }
+  }
+
+ xit:
+  adns__consistency(ads,0,cc_entex);
+  return r;
 }
 
 #endif

@@ -1,7 +1,12 @@
 # configure.in - input to autoconf
 #  
-#  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+#  This file is
+#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
 #
+#  It is part of adns, which is
+#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+#    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+#  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2, or (at your option)
@@ -19,11 +24,34 @@
 AC_INIT(src/adns.h)
 AC_CONFIG_HEADER(src/config.h)
 AC_PROG_CC
+AC_PROG_CPP
 AC_PROG_RANLIB
 
 AC_CHECK_FUNCS(poll)
 ADNS_C_GETFUNC(socket,socket)
 ADNS_C_GETFUNC(inet_ntoa,nsl)
+
+AC_MSG_CHECKING(for INADDR_LOOPBACK)
+AC_CACHE_VAL(adns_cv_decl_inaddrloopback,[
+ AC_TRY_COMPILE([
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+ ],[
+  INADDR_LOOPBACK;
+ ],
+ adns_cv_decl_inaddrloopback=yes,
+ adns_cv_decl_inaddrloopback=no)])
+if test "$adns_cv_decl_inaddrloopback" = yes; then
+ AC_MSG_RESULT(found)
+else
+ AC_MSG_RESULT([not in standard headers, urgh...])
+ AC_CHECK_HEADER(rpc/types.h,[
+  AC_DEFINE(HAVEUSE_RPCTYPES_H)
+ ],[
+  AC_MSG_ERROR([cannot find INADDR_LOOPBACK or rpc/types.h])
+ ])
+fi
 
 ADNS_C_GETFUNC(inet_aton,resolv,[
  LIBS="-lresolv $LIBS";
@@ -44,6 +72,8 @@ AC_SUBST(SHLIBCC)
 AC_SUBST(MKSHLIB_1)
 AC_SUBST(MKSHLIB_2)
 AC_SUBST(MKSHLIB_3)
+
+AC_SUBST(SHLIBFORLINK)
 AC_SUBST(SHLIBFILE)
 AC_SUBST(SHLIBSONAME)
 
@@ -51,8 +81,10 @@ SHLIBCC='$(CC) $(CFLAGS) -fpic'
 MKSHLIB_1='$(CC) $(LDFLAGS) -shared -Wxl,soname=$(SONAME) -o'
 MKSHLIB_2=''
 MKSHLIB_3='-lc'
-SHLIBFILE='libadns.so.$(MAJOR).$(MINOR)'
-SHLIBSONAME='libadns.so.$(MAJOR)'
+
+SHLIBFORLINK='libadns.so'
+SHLIBSONAME='$(SHLIBFORLINK).$(MAJOR)'
+SHLIBFILE='$(SHLIBSONAME).$(MINOR)'
 
 AC_OUTPUT(
 	settings.make Makefile

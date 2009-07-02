@@ -3,7 +3,12 @@
  * input file for autoheader/autoconf/configure: extra stuff for config.h
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,6 +36,9 @@
 
 /* Define if printf-format argument lists a la GCC are available.  */
 #undef HAVE_GNUC25_PRINTFFORMAT
+
+/* Define if we want to include rpc/types.h.  Crap BSDs put INADDR_LOOPBACK there. */
+#undef HAVEUSE_RPCTYPES_H
 
 @BOTTOM@
 
@@ -94,4 +102,8 @@ struct pollfd { int fd; short events; short revents; };
 #endif
 #ifndef CONSTANT
 #define CONSTANT FUNCATTR((ATTRCONST))
+#endif
+
+#ifdef HAVEUSE_RPCTYPES_H
+#include <rpc/types.h>
 #endif

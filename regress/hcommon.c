@@ -193,8 +193,8 @@ void Tvbpollfds(const struct pollfd *fds, int nfds) {
 void Tvberrno(int e) {
   const struct Terrno *te;
   for (te= Terrnos; te->n && te->v != e; te++);
-  if (te->n) Tvba(te->n);
-  else Tvbf("E#%d",e);
+  assert(te->n);
+  Tvba(te->n);
 }
 void Tvba(const char *str) {
   if (!adns__vbuf_appendstr(&vb,str)) Tnomem();

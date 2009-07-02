@@ -1,9 +1,14 @@
 /*
- * dtest.c
+ * adnstest.c
  * - simple test program, not part of the library
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,23 +45,43 @@
 #undef poll
 int poll(struct pollfd *ufds, int nfds, int timeout) {
   fputs("poll(2) not supported on this system\n",stderr);
-  exit(3);
+  exit(5);
 }
 #define adns_beforepoll(a,b,c,d,e) 0
 #define adns_afterpoll(a,b,c,d) 0
 #endif
 
+static void failure_status(const char *what, adns_status st) NONRETURNING;
 static void failure_status(const char *what, adns_status st) {
   fprintf(stderr,"adns failure: %s: %s\n",what,adns_strerror(st));
   exit(2);
 }
 
+static void failure_errno(const char *what, int errnoval) NONRETURNING;
 static void failure_errno(const char *what, int errnoval) {
   fprintf(stderr,"adns failure: %s: errno=%d\n",what,errnoval);
   exit(2);
 }
 
-static const char *defaultargv[]= { "ns.chiark.greenend.org.uk", 0 };
+static void usageerr(const char *why) NONRETURNING;
+static void usageerr(const char *why) {
+  fprintf(stderr,
+	  "bad usage: %s\n"
+	  "usage: adnstest [-<initflagsnum>[,<owninitflags>]] [/<initstring>]\n"
+	  "              [ :<typenum>,... ]\n"
+	  "              [ [<queryflagsnum>[,<ownqueryflags>]/]<domain> ... ]\n"
+	  "initflags:   p  use poll(2) instead of select(2)\n"
+	  "             s  use adns_wait with specified query, instead of 0\n"
+	  "queryflags:  a  print status abbrevs instead of strings\n"
+	  "exit status:  0 ok (though some queries may have failed)\n"
+	  "              1 used by test harness to indicate test failed\n"
+	  "              2 unable to submit or init or some such\n"
+	  "              3 unexpected failure\n"
+	  "              4 usage error\n"
+	  "              5 operation not supported on this system\n",
+	  why);
+  exit(4);
+}
 
 static const adns_rrtype defaulttypes[]= {
   adns_r_a,
@@ -123,8 +148,7 @@ int main(int argc, char *const *argv) {
   const char *initstring, *rrtn, *fmtn;
   const char *const *fdomlist, *domain;
   char *show, *cp;
-  int len, i, qc, qi, tc, ti, ch, qflags, initflagsnum, npollfds, npollfdsavail, timeout;
-  struct pollfd *pollfds;
+  int len, i, qc, qi, tc, ti, ch, qflags, initflagsnum;
   adns_status ri;
   int r;
   const adns_rrtype *types;
@@ -150,15 +174,11 @@ int main(int argc, char *const *argv) {
   initflagsnum= strtoul(initflags,&ep,0);
   if (*ep == ',') {
     owninitflags= ep+1;
-    if (!consistsof(owninitflags,"ps")) {
-      fputs("unknown owninitflag\n",stderr);
-      exit(4);
-    }
+    if (!consistsof(owninitflags,"ps")) usageerr("unknown owninitflag");
   } else if (!*ep) {
     owninitflags= "";
   } else {
-    fputs("bad <initflagsnum>[,<owninitflags>]\n",stderr);
-    exit(4);
+    usageerr("bad <initflagsnum>[,<owninitflags>]");
   }
   
   if (argv[0] && argv[1] && argv[1][0] == ':') {
@@ -169,16 +189,7 @@ int main(int argc, char *const *argv) {
     for (cp= argv[1]+1, ti=0; ti<tc; ti++) {
       types_a[ti]= strtoul(cp,&cp,10);
       if ((ch= *cp)) {
-	if (ch != ',') {
-	  fputs("usage: adnstest [-<initflagsnum>[,<owninitflags>]] [/<initstring>]\n"
-		"              [ :<typenum>,... ]\n"
-		"              [ [<queryflagsnum>[,<ownqueryflags>]/]<domain> ... ]\n"
-		"initflags:   p  use poll(2) instead of select(2)\n"
-		"             s  use adns_wait with specified query, instead of 0\n"
-		"queryflags:  a  print status abbrevs instead of strings\n",
-		stderr);
-	  exit(4);
-	}
+	if (ch != ',') usageerr("unexpected char (not comma) in or between types");
 	cp++;
       }
     }
@@ -189,8 +200,8 @@ int main(int argc, char *const *argv) {
     types= defaulttypes;
   }
   
-  if (argv[0] && argv[1]) fdomlist= (const char *const*)argv+1;
-  else fdomlist= defaultargv;
+  if (!(argv[0] && argv[1])) usageerr("no query domains supplied");
+  fdomlist= (const char *const*)argv+1;
 
   for (qc=0; fdomlist[qc]; qc++);
   for (tc=0; types[tc] != adns_r_none; tc++);
@@ -199,7 +210,8 @@ int main(int argc, char *const *argv) {
 
   if (initstring) {
     r= adns_init_strcfg(&ads,
-			(adns_if_debug|adns_if_noautosys)^initflagsnum,
+			(adns_if_debug|adns_if_noautosys|adns_if_checkc_freq)
+			^initflagsnum,
 			stdout,initstring);
   } else {
     r= adns_init(&ads,
@@ -208,15 +220,9 @@ int main(int argc, char *const *argv) {
   }
   if (r) failure_errno("init",r);
 
-  npollfdsavail= 0;
-  pollfds= 0;
-  
   for (qi=0; qi<qc; qi++) {
     fdom_split(fdomlist[qi],&domain,&qflags,ownflags,sizeof(ownflags));
-    if (!consistsof(ownflags,"a")) {
-      fputs("unknown ownqueryflag\n",stderr);
-      exit(4);
-    }
+    if (!consistsof(ownflags,"a")) usageerr("unknown ownqueryflag");
     for (ti=0; ti<tc; ti++) {
       mc= &mcs[qi*tc+ti];
       mc->doneyet= 0;
@@ -274,23 +280,7 @@ int main(int argc, char *const *argv) {
     }
 
     if (strchr(owninitflags,'p')) {
-      for (;;) {
-	r= adns_check(ads,&qu,&ans,&mcr);
-	if (r != EWOULDBLOCK) break;
-	for (;;) {
-	  npollfds= npollfdsavail;
-	  timeout= -1;
-	  r= adns_beforepoll(ads, pollfds, &npollfds, &timeout, 0);
-	  if (r != ERANGE) break;
-	  pollfds= realloc(pollfds,sizeof(*pollfds)*npollfds);
-	  if (!pollfds) failure_errno("realloc pollfds",errno);
-	  npollfdsavail= npollfds;
-	}
-	if (r) failure_errno("beforepoll",r);
-	r= poll(pollfds,npollfds,timeout);
-	if (r == -1) failure_errno("poll",errno);
-	adns_afterpoll(ads,pollfds, r?npollfds:0, 0);
-      }
+      r= adns_wait_poll(ads,&qu,&ans,&mcr);
     } else {
       r= adns_wait(ads,&qu,&ans,&mcr);
     }

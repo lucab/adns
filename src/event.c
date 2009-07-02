@@ -5,7 +5,12 @@
  * - user-visible check/wait and event-loop-related functions
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,7 +27,6 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
  */
 
-#include <string.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -43,8 +47,9 @@ void adns__tcp_closenext(adns_state ads) {
   
   serv= ads->tcpserver;
   close(ads->tcpsocket);
+  ads->tcpsocket= -1;
   ads->tcpstate= server_disconnected;
-  ads->tcprecv.used= ads->tcpsend.used= 0;
+  ads->tcprecv.used= ads->tcprecv_skip= ads->tcpsend.used= 0;
   ads->tcpserver= (serv+1)%ads->nservers;
 }
 
@@ -93,6 +98,7 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
     assert(ads->tcpstate == server_disconnected);
     assert(!ads->tcpsend.used);
     assert(!ads->tcprecv.used);
+    assert(!ads->tcprecv_skip);
 
     proto= getprotobyname("tcp");
     if (!proto) { adns__diag(ads,-1,0,"unable to find protocol no. for TCP !"); return; }
@@ -192,14 +198,18 @@ void adns__timeouts(adns_state ads, int act,
 void adns_firsttimeout(adns_state ads,
 		       struct timeval **tv_io, struct timeval *tvbuf,
 		       struct timeval now) {
+  adns__consistency(ads,0,cc_entex);
   adns__timeouts(ads, 0, tv_io,tvbuf, now);
+  adns__consistency(ads,0,cc_entex);
 }
 
 void adns_processtimeouts(adns_state ads, const struct timeval *now) {
   struct timeval tv_buf;
 
-  adns__must_gettimeofday(ads,&now,&tv_buf); if (!now) return;
-  adns__timeouts(ads, 1, 0,0, *now);
+  adns__consistency(ads,0,cc_entex);
+  adns__must_gettimeofday(ads,&now,&tv_buf);
+  if (now) adns__timeouts(ads, 1, 0,0, *now);
+  adns__consistency(ads,0,cc_entex);
 }
 
 /* fd handling functions.  These are the top-level of the real work of
@@ -232,33 +242,39 @@ int adns__pollfds(adns_state ads, struct pollfd pollfds_buf[MAX_POLLFDS]) {
 }
 
 int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
-  int skip, want, dgramlen, r, udpaddrlen, serv;
+  int want, dgramlen, r, udpaddrlen, serv, old_skip;
   byte udpbuf[DNS_MAXUDP];
   struct sockaddr_in udpaddr;
   
+  adns__consistency(ads,0,cc_entex);
+
   switch (ads->tcpstate) {
   case server_disconnected:
   case server_connecting:
     break;
   case server_ok:
     if (fd != ads->tcpsocket) break;
-    skip= 0;
+    assert(!ads->tcprecv_skip);
     for (;;) {
-      if (ads->tcprecv.used<skip+2) {
-	want= 2;
-      } else {
-	dgramlen= (ads->tcprecv.buf[skip]<<8) | ads->tcprecv.buf[skip+1];
-	if (ads->tcprecv.used<skip+2+dgramlen) {
-	  want= 2+dgramlen;
+      if (ads->tcprecv.used >= ads->tcprecv_skip+2) {
+	dgramlen= ((ads->tcprecv.buf[ads->tcprecv_skip]<<8) |
+	           ads->tcprecv.buf[ads->tcprecv_skip+1]);
+	if (ads->tcprecv.used >= ads->tcprecv_skip+2+dgramlen) {
+	  old_skip= ads->tcprecv_skip;
+	  ads->tcprecv_skip += 2+dgramlen;
+	  adns__procdgram(ads, ads->tcprecv.buf+old_skip+2,
+			  dgramlen, ads->tcpserver, 1,*now);
+	  continue;
 	} else {
-	  adns__procdgram(ads,ads->tcprecv.buf+skip+2,dgramlen,ads->tcpserver,1,*now);
-	  skip+= 2+dgramlen; continue;
+	  want= 2+dgramlen;
 	}
+      } else {
+	want= 2;
       }
-      ads->tcprecv.used -= skip;
-      memmove(ads->tcprecv.buf,ads->tcprecv.buf+skip,ads->tcprecv.used);
-      skip= 0;
-      if (!adns__vbuf_ensure(&ads->tcprecv,want)) return ENOMEM;
+      ads->tcprecv.used -= ads->tcprecv_skip;
+      memmove(ads->tcprecv.buf,ads->tcprecv.buf+ads->tcprecv_skip,ads->tcprecv.used);
+      ads->tcprecv_skip= 0;
+      if (!adns__vbuf_ensure(&ads->tcprecv,want)) { r= ENOMEM; goto xit; }
       assert(ads->tcprecv.used <= ads->tcprecv.avail);
       if (ads->tcprecv.used == ads->tcprecv.avail) continue;
       r= read(ads->tcpsocket,
@@ -268,12 +284,12 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
 	ads->tcprecv.used+= r;
       } else {
 	if (r) {
-	  if (errno==EAGAIN || errno==EWOULDBLOCK) return 0;
+	  if (errno==EAGAIN || errno==EWOULDBLOCK) { r= 0; goto xit; }
 	  if (errno==EINTR) continue;
-	  if (errno_resources(errno)) return errno;
+	  if (errno_resources(errno)) { r= errno; goto xit; }
 	}
 	adns__tcp_broken(ads,"read",r?strerror(errno):"closed");
-	return 0;
+	r= 0; goto xit;
       }
     } /* never reached */
   default:
@@ -285,11 +301,11 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
       r= recvfrom(ads->udpsocket,udpbuf,sizeof(udpbuf),0,
 		  (struct sockaddr*)&udpaddr,&udpaddrlen);
       if (r<0) {
-	if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+	if (errno == EAGAIN || errno == EWOULDBLOCK) { r= 0; goto xit; }
 	if (errno == EINTR) continue;
-	if (errno_resources(errno)) return errno;
+	if (errno_resources(errno)) { r= errno; goto xit; }
 	adns__warn(ads,-1,0,"datagram receive error: %s",strerror(errno));
-	return 0;
+	r= 0; goto xit;
       }
       if (udpaddrlen != sizeof(udpaddr)) {
 	adns__diag(ads,-1,0,"datagram received with wrong address length %d"
@@ -318,33 +334,39 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
       adns__procdgram(ads,udpbuf,r,serv,0,*now);
     }
   }
-  return 0;
+  r= 0;
+xit:
+  adns__consistency(ads,0,cc_entex);
+  return r;
 }
 
 int adns_processwriteable(adns_state ads, int fd, const struct timeval *now) {
   int r;
   
+  adns__consistency(ads,0,cc_entex);
+
   switch (ads->tcpstate) {
   case server_disconnected:
     break;
   case server_connecting:
     if (fd != ads->tcpsocket) break;
     assert(ads->tcprecv.used==0);
+    assert(ads->tcprecv_skip==0);
     for (;;) {
-      if (!adns__vbuf_ensure(&ads->tcprecv,1)) return ENOMEM;
+      if (!adns__vbuf_ensure(&ads->tcprecv,1)) { r= ENOMEM; goto xit; }
       r= read(ads->tcpsocket,&ads->tcprecv.buf,1);
       if (r==0 || (r<0 && (errno==EAGAIN || errno==EWOULDBLOCK))) {
 	tcp_connected(ads,*now);
-	return 0;
+	r= 0; goto xit;
       }
       if (r>0) {
 	adns__tcp_broken(ads,"connect/read","sent data before first request");
-	return 0;
+	r= 0; goto xit;
       }
       if (errno==EINTR) continue;
-      if (errno_resources(errno)) return errno;
+      if (errno_resources(errno)) { r= errno; goto xit; }
       adns__tcp_broken(ads,"connect/read",strerror(errno));
-      return 0;
+      r= 0; goto xit;
     } /* not reached */
   case server_ok:
     if (!(ads->tcpsend.used && fd == ads->tcpsocket)) break;
@@ -354,10 +376,10 @@ int adns_processwriteable(adns_state ads, int fd, const struct timeval *now) {
       adns__sigpipe_unprotect(ads);
       if (r<0) {
 	if (errno==EINTR) continue;
-	if (errno==EAGAIN || errno==EWOULDBLOCK) return 0;
-	if (errno_resources(errno)) return errno;
+	if (errno==EAGAIN || errno==EWOULDBLOCK) { r= 0; goto xit; }
+	if (errno_resources(errno)) { r= errno; goto xit; }
 	adns__tcp_broken(ads,"write",strerror(errno));
-	return 0;
+	r= 0; goto xit;
       } else if (r>0) {
 	ads->tcpsend.used -= r;
 	memmove(ads->tcpsend.buf,ads->tcpsend.buf+r,ads->tcpsend.used);
@@ -366,10 +388,14 @@ int adns_processwriteable(adns_state ads, int fd, const struct timeval *now) {
   default:
     abort();
   }
-  return 0;
+  r= 0;
+xit:
+  adns__consistency(ads,0,cc_entex);
+  return r;
 }
   
 int adns_processexceptional(adns_state ads, int fd, const struct timeval *now) {
+  adns__consistency(ads,0,cc_entex);
   switch (ads->tcpstate) {
   case server_disconnected:
     break;
@@ -377,10 +403,11 @@ int adns_processexceptional(adns_state ads, int fd, const struct timeval *now) {
   case server_ok:
     if (fd != ads->tcpsocket) break;
     adns__tcp_broken(ads,"poll/select","exceptional condition detected");
-    return 0;
+    break;
   default:
     abort();
   }
+  adns__consistency(ads,0,cc_entex);
   return 0;
 }
 
@@ -431,10 +458,12 @@ void adns_beforeselect(adns_state ads, int *maxfd_io, fd_set *readfds_io,
   struct pollfd pollfds[MAX_POLLFDS];
   int i, fd, maxfd, npollfds;
   
+  adns__consistency(ads,0,cc_entex);
+
   if (tv_mod && (!*tv_mod || (*tv_mod)->tv_sec || (*tv_mod)->tv_usec)) {
     /* The caller is planning to sleep. */
     adns__must_gettimeofday(ads,&now,&tv_nowbuf);
-    if (!now) return;
+    if (!now) goto xit;
     adns__timeouts(ads, 1, tv_mod,tv_tobuf, *now);
   }
 
@@ -448,6 +477,9 @@ void adns_beforeselect(adns_state ads, int *maxfd_io, fd_set *readfds_io,
     if (pollfds[i].events & POLLPRI) FD_SET(fd,exceptfds_io);
   }
   *maxfd_io= maxfd;
+
+xit:
+  adns__consistency(ads,0,cc_entex);
 }
 
 void adns_afterselect(adns_state ads, int maxfd, const fd_set *readfds,
@@ -457,8 +489,9 @@ void adns_afterselect(adns_state ads, int maxfd, const fd_set *readfds,
   struct pollfd pollfds[MAX_POLLFDS];
   int npollfds, i;
 
+  adns__consistency(ads,0,cc_entex);
   adns__must_gettimeofday(ads,&now,&tv_buf);
-  if (!now) return;
+  if (!now) goto xit;
   adns_processtimeouts(ads,now);
 
   npollfds= adns__pollfds(ads,pollfds);
@@ -467,11 +500,15 @@ void adns_afterselect(adns_state ads, int maxfd, const fd_set *readfds,
 		 pollfds,npollfds,
 		 maxfd,readfds,writefds,exceptfds,
 		 *now, 0);
+xit:
+  adns__consistency(ads,0,cc_entex);
 }
 
 /* General helpful functions. */
 
 void adns_globalsystemfailure(adns_state ads) {
+  adns__consistency(ads,0,cc_entex);
+
   while (ads->timew.head) {
     adns__query_fail(ads->timew.head, adns_s_systemfail);
   }
@@ -486,23 +523,33 @@ void adns_globalsystemfailure(adns_state ads) {
   default:
     abort();
   }
+  adns__consistency(ads,0,cc_entex);
 }
 
 int adns_processany(adns_state ads) {
-  int r;
+  int r, i;
   struct timeval now;
   struct pollfd pollfds[MAX_POLLFDS];
   int npollfds;
 
+  adns__consistency(ads,0,cc_entex);
+
   r= gettimeofday(&now,0);
   if (!r) adns_processtimeouts(ads,&now);
 
+  /* We just use adns__fdevents to loop over the fd's trying them.
+   * This seems more sensible than calling select, since we're most
+   * likely just to want to do a read on one or two fds anyway.
+   */
   npollfds= adns__pollfds(ads,pollfds);
+  for (i=0; i<npollfds; i++) pollfds[i].revents= pollfds[i].events;
   adns__fdevents(ads,
 		 pollfds,npollfds,
 		 0,0,0,0,
 		 now,&r);
-  return r;
+
+  adns__consistency(ads,0,cc_entex);
+  return 0;
 }
 
 void adns__autosys(adns_state ads, struct timeval now) {
@@ -510,18 +557,23 @@ void adns__autosys(adns_state ads, struct timeval now) {
   adns_processany(ads);
 }
 
-static int internal_check(adns_state ads,
-			  adns_query *query_io,
-			  adns_answer **answer,
-			  void **context_r) {
+int adns__internal_check(adns_state ads,
+			 adns_query *query_io,
+			 adns_answer **answer,
+			 void **context_r) {
   adns_query qu;
 
   qu= *query_io;
   if (!qu) {
-    if (!ads->output.head) return EWOULDBLOCK;
-    qu= ads->output.head;
+    if (ads->output.head) {
+      qu= ads->output.head;
+    } else if (ads->timew.head) {
+      return EAGAIN;
+    } else {
+      return ESRCH;
+    }
   } else {
-    if (qu->id>=0) return EWOULDBLOCK;
+    if (qu->id>=0) return EAGAIN;
   }
   LIST_UNLINK(ads->output,qu);
   *answer= qu->answer;
@@ -539,16 +591,17 @@ int adns_wait(adns_state ads,
   fd_set readfds, writefds, exceptfds;
   struct timeval tvbuf, *tvp;
   
+  adns__consistency(ads,*query_io,cc_entex);
   for (;;) {
-    r= internal_check(ads,query_io,answer_r,context_r);
-    if (r != EWOULDBLOCK) return r;
+    r= adns__internal_check(ads,query_io,answer_r,context_r);
+    if (r != EAGAIN) break;
     maxfd= 0; tvp= 0;
     FD_ZERO(&readfds); FD_ZERO(&writefds); FD_ZERO(&exceptfds);
     adns_beforeselect(ads,&maxfd,&readfds,&writefds,&exceptfds,&tvp,&tvbuf,0);
     rsel= select(maxfd,&readfds,&writefds,&exceptfds,tvp);
     if (rsel==-1) {
       if (errno == EINTR) {
-	if (ads->iflags & adns_if_eintr) return EINTR;
+	if (ads->iflags & adns_if_eintr) { r= EINTR; break; }
       } else {
 	adns__diag(ads,-1,0,"select failed in wait: %s",strerror(errno));
 	adns_globalsystemfailure(ads);
@@ -558,6 +611,8 @@ int adns_wait(adns_state ads,
       adns_afterselect(ads,maxfd,&readfds,&writefds,&exceptfds,0);
     }
   }
+  adns__consistency(ads,0,cc_entex);
+  return r;
 }
 
 int adns_check(adns_state ads,
@@ -567,8 +622,11 @@ int adns_check(adns_state ads,
   struct timeval now;
   int r;
   
+  adns__consistency(ads,*query_io,cc_entex);
   r= gettimeofday(&now,0);
   if (!r) adns__autosys(ads,now);
-  
-  return internal_check(ads,query_io,answer_r,context_r);
+
+  r= adns__internal_check(ads,query_io,answer_r,context_r);
+  adns__consistency(ads,0,cc_entex);
+  return r;
 }

@@ -1,3 +1,54 @@
+adns (0.5) unstable; urgency=high
+
+  New features:
+  * adnslogres, ~100x faster replacement for Apache logresolve;
+    Thanks to Tony Finch for the program and the performance figure.
+  * Internal consistency checking with assert if right options set.
+  * adns_wait_poll function like adns_wait but uses poll, not select.
+  * adns_reverse_submit function for easy in-addr queries.
+  * adns_errtypeabbrev funcion for getting eg "permfail" from _s_nodata.
+  * adnshost utility for scripts and the like (rather alpha).
+
+  Incompatible changes:
+  * RRs with mailboxes never rejected due to strange chars if _raw.
+  * Lack of a mailbox produces `.' not `<>'.
+  * Better usage messages (and no default query domain) for adnstest.
+  * Return EAGAIN from _check instead of EWOULDBLOCK.
+  * adns_rr_info on _r_mx etc. shows status type abbrev and status number.
+  
+  Bugfixes:
+  * Do not invoke __autosys indirectly from __procdgram (result: coredump
+    usually in memmove, unless adns_if_noautosys was used).
+  * Do not scramble innards when a query on the output queue is cancelled.
+  * Do not close tcp socket twice.
+  * Mailboxes containing spaces in their names are quoted.
+  * Give ESRCH, not EAGAIN, if _check called with no queries outstanding.
+  * adns_rr_hostaddr naddrs is -1 on temporary failure (as documented).
+  * Reject TXT RRs with no strings.
+  * Correct error messages for qname CNAME foo, foo CNAME bar.
+  * adns_processany actually does something.
+  * Fixed typos in adns.h.
+
+  General improvements:
+  * Promise not to change fds in adns_beforepoll (if now is specified).
+  * Improved textual error string for _s_prohibitedcname.
+  * New comment in adns_processany and return 0 (not r which is 0).
+  * Documentation of resolv.conf directives and options, and of environment
+    variables understood, in adns.h
+  * Regression test scripts set EF_DISABLE_BANNER (for Electric Fence).
+
+  Portability and build improvements:
+  * Give install the '-c' flag (otherwise some delete the original !).
+  * Do not remove top-level Makefile on `make clean'.
+  * Don't complain so much about poll(2) tests if not available.
+  * Do not give -u 0 -g 0 options to install.
+  * Remove trailing , from some enums in adns.h.
+  * Dynamically linked clients now made with -l, so as to avoid rpath.
+  * Do not use $^ in make rules (should help with non-GNU make).
+  * Declare flags parameters as ints not enums because C++ is crap.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed, 13 Oct 1999 02:24:35 +0100
+
 adns (0.4) unstable; urgency=high
 
   General important bugfixes:
@@ -78,4 +129,5 @@ adns (0.1) experimental; urgency=low
 
 Local variables:
 mode: debian-changelog
+fill-column: 75
 End:

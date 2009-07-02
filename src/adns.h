@@ -3,7 +3,13 @@
  * - adns user-visible API (single-threaded, without any locking)
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,12 +20,38 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
+ *
+ * 
+ *  For the benefit of certain LGPL'd `omnibus' software which provides
+ *  a uniform interface to various things including adns, I make the
+ *  following additional licence.  I do this because the GPL would
+ *  otherwise force either the omnibus software to be GPL'd or for the
+ *  adns-using part to be distributed separately.
  *  
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software Foundation,
+ *  So, you may also redistribute and/or modify adns.h (but only the
+ *  public header file adns.h and not any other part of adns) under the
+ *  terms of the GNU Library General Public License as published by the
+ *  Free Software Foundation; either version 2 of the License, or (at
+ *  your option) any later version.
+ *  
+ *  Note that adns itself is GPL'd.  Authors of adns-using applications
+ *  with GPL-incompatible licences, and people who distribute adns with
+ *  applications where the whole distribution is not GPL'd, are still
+ *  likely to be in violation of the GPL.  Anyone who wants to do this
+ *  should contact Ian Jackson.  Please note that to avoid encouraging
+ *  people to infringe the GPL as it applies the body of adns, I think
+ *  that if you take advantage of the special exception to redistribute
+ *  just adns.h under the LGPL, you should retain this paragraph in its
+ *  place in the appropriate copyright statements.
+ *
+ *
+ *  You should have received a copy of the GNU General Public License,
+ *  or the GNU Library General Public License, as appropriate, along
+ *  with this program; if not, write to the Free Software Foundation,
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- *  $Id: adns.h,v 1.55 1999/08/05 00:03:24 ian Exp $
+ *
+ *  $Id: adns.h,v 1.70 1999/10/13 01:23:56 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
@@ -49,18 +81,21 @@ typedef enum {
   adns_if_noautosys=    0x0010, /* do not make syscalls at every opportunity */
   adns_if_eintr=        0x0020, /* allow _wait and _synchronous to return EINTR */
   adns_if_nosigpipe=    0x0040, /* applic has SIGPIPE set to SIG_IGN, do not protect */
+  adns_if_checkc_entex= 0x0100, /* do consistency checks on entry/exit to adns funcs */
+  adns_if_checkc_freq=  0x0300  /* do consistency checks very frequently (slow!) */
 } adns_initflags;
 
 typedef enum {
-  adns_qf_search=          0x000001, /* use the searchlist */
-  adns_qf_usevc=           0x000002, /* use a virtual circuit (TCP connection) */
-  adns_qf_owner=           0x000004, /* fill in the owner field in the answer */
-  adns_qf_quoteok_query=   0x000010, /* allow quote-requiring chars in query domain */
-  adns_qf_quoteok_cname=   0x000020, /* allow ... in CNAME we go via */
-  adns_qf_quoteok_anshost= 0x000040, /* allow ... in answers expected to be hostnames */
-  adns_qf_cname_loose=     0x000100, /* allow refs to CNAMEs - without, get _s_cname */
-  adns_qf_cname_forbid=    0x000200, /* don't follow CNAMEs, instead give _s_cname */
-  adns__qf_internalmask=   0x0ff000
+  adns_qf_search=          0x00000001, /* use the searchlist */
+  adns_qf_usevc=           0x00000002, /* use a virtual circuit (TCP connection) */
+  adns_qf_owner=           0x00000004, /* fill in the owner field in the answer */
+  adns_qf_quoteok_query=   0x00000010, /* allow quote-requiring chars in query domain */
+  adns_qf_quoteok_cname=   0x00000000, /* allow ... in CNAME we go via - now default */
+  adns_qf_quoteok_anshost= 0x00000040, /* allow ... in things supposed to be hostnames */
+  adns_qf_quotefail_cname= 0x00000080, /* refuse if quote-req chars in CNAME we go via */
+  adns_qf_cname_loose=     0x00000100, /* allow refs to CNAMEs - without, get _s_cname */
+  adns_qf_cname_forbid=    0x00000200, /* don't follow CNAMEs, instead give _s_cname */
+  adns__qf_internalmask=   0x0ff00000
 } adns_queryflags;
 
 typedef enum {
@@ -97,18 +132,57 @@ typedef enum {
   
 } adns_rrtype;
 
-/* In queries without qf_quoteok_*, all domains must have standard
- * legal syntax.  In queries _with_ qf_quoteok_*, domains in the query
- * or response may contain any characters, quoted according to RFC1035
- * 5.1.  On input to adns, the char* is a pointer to the interior of a
- * " delimited string, except that " may appear in it, and on output,
+/*
+ * In queries without qf_quoteok_*, all domains must have standard
+ * legal syntax, or you get adns_s_querydomainvalid (if the query
+ * domain contains bad characters) or adns_s_answerdomaininvalid (if
+ * the answer contains bad characters).
+ * 
+ * In queries _with_ qf_quoteok_*, domains in the query or response
+ * may contain any characters, quoted according to RFC1035 5.1.  On
+ * input to adns, the char* is a pointer to the interior of a "
+ * delimited string, except that " may appear in it, and on output,
  * the char* is a pointer to a string which would be legal either
  * inside or outside " delimiters, and any characters not usually
  * legal in domain names will be quoted as \X (if the character is
  * 33-126 except \ and ") or \DDD.
  *
- * Do not ask for _raw records containing mailboxes without
- * specifying _qf_anyquote.
+ * If the query goes via a CNAME then the canonical name (ie, the
+ * thing that the CNAME record refers to) is usually allowed to
+ * contain any characters, which will be quoted as above.  With
+ * adns_qf_quotefail_cname you get adns_s_answerdomaininvalid when
+ * this happens.  (This is a change from version 0.4 and earlier, in
+ * which failing the query was the default, and you had to say
+ * adns_qf_quoteok_cname to avoid this; that flag is now deprecated.)
+ *
+ * In version 0.4 and earlier, asking for _raw records containing
+ * mailboxes without specifying _qf_quoteok_anshost was silly.  This
+ * is no longer the case.  In this version only parts of responses
+ * that are actually supposed to be hostnames will be refused by
+ * default if quote-requiring characters are found.
+ */
+
+/*
+ * If you ask for an RR which contains domains which are actually
+ * encoded mailboxes, and don't ask for the _raw version, then adns
+ * returns the mailbox formatted suitably for an RFC822 recipient
+ * header field.  The particular format used is that if the mailbox
+ * requires quoting according to the rules in RFC822 then the
+ * local-part is quoted in double quotes, which end at the next
+ * unescaped double quote.  (\ is the escape char, and is doubled, and
+ * is used to escape only \ and ".)  Otherwise the local-part is
+ * presented as-is.  In any case this is followed by an @ and the
+ * domain.  The domain will not contain any characters not legal in
+ * hostnames.  adns will protect the application from local parts
+ * containing control characters - these appear to be legal according
+ * to RFC822 but are clearly a bad idea.
+ *
+ * If you ask for the domain with _raw then _no_ checking is done
+ * (even on the host part, regardless of adns_qf_quoteok_anshost), and
+ * you just get the domain name in master file format.
+ *
+ * If no mailbox is supplied the returned string will be `.' in either
+ * caswe.
  */
 
 typedef enum {
@@ -158,6 +232,8 @@ typedef enum {
   /* permanent errors */
   adns_s_nxdomain,
   adns_s_nodata,
+
+  adns_s_max_permfail= 499
   
 } adns_status;
 
@@ -210,7 +286,7 @@ typedef struct {
   char *owner; /* only set if requested in query flags */
   adns_rrtype type; /* guaranteed to be same as in query */
   time_t expires; /* expiry time, defined only if _s_ok, nxdomain or nodata. NOT TTL! */
-  int nrrs, rrsz;
+  int nrrs, rrsz; /* nrrs is 0 if an error occurs */
   union {
     void *untyped;
     unsigned char *bytes;
@@ -246,9 +322,9 @@ typedef struct {
  *  values.
  * 
  *  For _wait and _check failures are reported in the answer
- *  structure, and only 0, ESRCH or (for _check) EWOULDBLOCK is
+ *  structure, and only 0, ESRCH or (for _check) EAGAIN is
  *  returned: if no (appropriate) requests are done adns_check returns
- *  EWOULDBLOCK; if no (appropriate) requests are outstanding both
+ *  EAGAIN; if no (appropriate) requests are outstanding both
  *  adns_query and adns_wait return ESRCH.
  *
  *  Additionally, _wait can return EINTR if you set adns_if_eintr.
@@ -260,16 +336,114 @@ typedef struct {
  *  requested.
  */
 
-int adns_init(adns_state *newstate_r, adns_initflags flags,
+int adns_init(adns_state *newstate_r, int flags /*adns_initflags*/,
 	      FILE *diagfile /*0=>stderr*/);
 
-int adns_init_strcfg(adns_state *newstate_r, adns_initflags flags,
+int adns_init_strcfg(adns_state *newstate_r, int flags /*adns_initflags*/,
 		     FILE *diagfile /*0=>discard*/, const char *configtext);
+
+/* Configuration:
+ *  adns_init reads /etc/resolv.conf, which is expected to be (broadly
+ *  speaking) in the format expected by libresolv.  adns_init_strcfg
+ *  is instead passed a string which is interpreted as if it were the
+ *  contents of resolv.conf.  In general, configuration which is set
+ *  later overrides any that is set earlier.
+ *
+ * Standard directives understood in resolv.conf:
+ * 
+ *  nameserver <address>
+ *   Must be followed by the IP address of a nameserver.  Several
+ *   nameservers may be specified, and they will be tried in the order
+ *   found.  There is a compiled in limit, currently 5, on the number
+ *   of nameservers.  (libresolv supports only 3 nameservers.)
+ *
+ *  search <domain> ...
+ *   Specifies the search list for queries which specify
+ *   adns_qf_search.  This is a list of domains to append to the query
+ *   domain.  The query domain will be tried as-is either before all
+ *   of these or after them, depending on the ndots option setting
+ *   (see below).
+ *
+ *  domain <domain>
+ *   This is present only for backward compatibility with obsolete
+ *   versions of libresolv.  It should not be used, and is interpreted
+ *   by adns as if it were `search' - note that this is subtly
+ *   different to libresolv's interpretation of this directive.
+ *
+ *  sortlist <addr>/<mask> ...
+ *   Should be followed by a sequence of IP-address and netmask pairs,
+ *   separated by spaces.  They may be specified as
+ *   eg. 172.30.206.0/24 or 172.30.206.0/255.255.255.0.  Currently up
+ *   to 15 pairs may be specified (but note that libresolv only
+ *   supports up to 10).
+ *
+ *  options
+ *   Should followed by one or more options, separated by spaces.
+ *   Each option consists of an option name, followed by optionally
+ *   a colon and a value.  Options are listed below.
+ *
+ * Non-standard directives understood in resolv.conf:
+ *
+ *  clearnameservers
+ *   Clears the list of nameservers, so that further nameserver lines
+ *   start again from the beginning.
+ *
+ *  include <filename>
+ *   The specified file will be read.
+ *
+ * Additionally, adns will ignore lines in resolv.conf which start with a #.
+ *
+ * Standard options understood:
+ *
+ *  debug
+ *   Enables debugging output from the resolver, which will be written
+ *   to stderr.
+ *
+ *  ndots:<count>
+ *   Affects whether queries with adns_qf_search will be tried first
+ *   without adding domains from the searchlist, or whether the bare
+ *   query domain will be tried last.  Queries which contain at least
+ *   <count> dots will be tried bare first.  The default is 1.
+ *
+ * Non-standard options understood:
+ *
+ *  adns_checkc:none
+ *  adns_checkc:entex
+ *  adns_checkc:freq
+ *   Changes the consistency checking frequency; this overrides the
+ *   setting of adns_if_check_entex, adns_if_check_freq, or neither,
+ *   in the flags passed to adns_init.
+ * 
+ * There are a number of environment variables which can modify the
+ * behaviour of adns.  They take effect only if adns_init is used, and
+ * the caller of adns_init can disable them using adns_if_noenv.  In
+ * each case there is both a FOO and an ADNS_FOO; the latter is
+ * interpreted later so that it can override the former.  Unless
+ * otherwise stated, environment variables are interpreted after
+ * resolv.conf is read, in the order they are listed here.
+ *
+ *  RES_CONF, ADNS_RES_CONF
+ *   A filename, whose contets are in the format of resolv.conf.
+ *
+ *  RES_CONF_TEXT, ADNS_RES_CONF_TEXT
+ *   A string in the format of resolv.conf.
+ *
+ *  RES_OPTIONS, ADNS_RES_OPTIONS
+ *   These are parsed as if they appeared in the `options' line of a
+ *   resolv.conf.  In addition to being parsed at this point in the
+ *   sequence, they are also parsed at the very beginning before
+ *   resolv.conf or any other environment variables are read, so that
+ *   any debug option can affect the processing of the configuration.
+ *
+ *  LOCALDOMAIN, ADNS_LOCALDOMAIN
+ *   These are interpreted as if their contents appeared in a `search'
+ *   line in resolv.conf.
+ */
 
 int adns_synchronous(adns_state ads,
 		     const char *owner,
 		     adns_rrtype type,
-		     adns_queryflags flags,
+		     int flags /*adns_queryflags*/,
 		     adns_answer **answer_r);
 
 /* NB: if you set adns_if_noautosys then _submit and _check do not
@@ -280,9 +454,11 @@ int adns_synchronous(adns_state ads,
 int adns_submit(adns_state ads,
 		const char *owner,
 		adns_rrtype type,
-		adns_queryflags flags,
+		int flags /*adns_queryflags*/,
 		void *context,
 		adns_query *query_r);
+
+/* The owner should be quoted in master file format. */
 
 int adns_check(adns_state ads,
 	       adns_query *query_io,
@@ -293,6 +469,12 @@ int adns_wait(adns_state ads,
 	      adns_query *query_io,
 	      adns_answer **answer_r,
 	      void **context_r);
+
+/* same as adns_wait but uses poll(2) internally */
+int adns_wait_poll(adns_state ads,
+		   adns_query *query_io,
+		   adns_answer **answer_r,
+		   void **context_r);
 
 void adns_cancel(adns_query query);
 
@@ -306,6 +488,16 @@ void adns_cancel(adns_query query);
  *
  * _submit and _synchronous return ENOSYS if they don't understand the
  * query type.
+ */
+
+int adns_submit_reverse(adns_state ads,
+			const struct sockaddr *addr,
+			adns_rrtype type,
+			int flags /*adns_queryflags*/,
+			void *context,
+			adns_query *query_r);
+/* type must be _r_ptr or _r_ptr_raw.  _qf_search is ignored.
+ * addr->sa_family must be AF_INET or you get ENOSYS.
  */
 
 void adns_finish(adns_state ads);
@@ -331,6 +523,13 @@ adns_query adns_forallqueries_next(adns_state ads, void **context_r);
  * context_r may be 0.  *context_r may not be set when _next returns 0.
  */
 
+void adns_checkconsistency(adns_state ads, adns_query qu);
+/* Checks the consistency of adns's internal data structures.
+ * If any error is found, the program will abort().
+ * You may pass 0 for qu; if you pass non-null then additional checks
+ * are done to make sure that qu is a valid query.
+ */
+
 /*
  * Example expected/legal calling sequence for submit/check/wait:
  *  adns_init
@@ -338,7 +537,7 @@ adns_query adns_forallqueries_next(adns_state ads, void **context_r);
  *  adns_submit 2
  *  adns_submit 3
  *  adns_wait 1
- *  adns_check 3 -> EWOULDBLOCK
+ *  adns_check 3 -> EAGAIN
  *  adns_wait 2
  *  adns_wait 3
  *  ....
@@ -370,7 +569,7 @@ int adns_processexceptional(adns_state ads, int fd, const struct timeval *now);
  * from, or send outgoing data via, fd.  Very like _processany.  If it
  * returns zero then fd will no longer be readable or writeable
  * (unless of course more data has arrived since).  adns will _only_
- * that fd and only in the manner specified, regardless of whether
+ * use that fd and only in the manner specified, regardless of whether
  * adns_if_noautosys was specified.
  *
  * adns_processexceptional should be called when select(2) reports an
@@ -496,7 +695,7 @@ int adns_beforepoll(adns_state ads, struct pollfd *fds, int *nfds_io, int *timeo
  * in *nfds_io, and always return either 0 (if it is not interested in
  * any fds) or ERANGE (if it is).
  *
- * NOTE that (unless timeout_io is 0) adns may acquire additional fds
+ * NOTE that (unless now is 0) adns may acquire additional fds
  * from one call to the next, so you must put adns_beforepoll in a
  * loop, rather than assuming that the second call (with the buffer
  * size requested by the first) will not return ERANGE.
@@ -517,9 +716,11 @@ int adns_beforepoll(adns_state ads, struct pollfd *fds, int *nfds_io, int *timeo
  * adns_beforepoll will return 0 on success, and will not fail for any
  * reason other than the fds buffer being too small (ERANGE).
  *
- * This call will never actually do any I/O, or change the fds that
- * adns is using or the timeouts it wants; and in any case it won't
- * block.
+ * This call will never actually do any I/O.  If you supply the
+ * current time it will not change the fds that adns is using or the
+ * timeouts it wants.
+ *
+ * In any case this call won't block.
  */
 
 #define ADNS_POLLFDS_RECOMMENDED 2
@@ -541,21 +742,22 @@ adns_status adns_rr_info(adns_rrtype type,
 			 const char **rrtname_r, const char **fmtname_r,
 			 int *len_r,
 			 const void *datap, char **data_r);
-/* Gets information in human-readable (but non-i18n) form
- * for eg debugging purposes.  type must be specified,
- * and the official name of the corresponding RR type will
- * be returned in *rrtname_r, and information about the processing
- * style in *fmtname_r.  The length of the table entry in an answer
- * for that type will be returned in in *len_r.
- * Any or all of rrtname_r, fmtname_r and len_r may be 0.
- * If fmtname_r is non-null then *fmtname_r may be
- * null on return, indicating that no special processing is
- * involved.
+/*
+ * Get information about a query type, or convert reply data to a
+ * textual form.  type must be specified, and the official name of the
+ * corresponding RR type will be returned in *rrtname_r, and
+ * information about the processing style in *fmtname_r.  The length
+ * of the table entry in an answer for that type will be returned in
+ * in *len_r.  Any or all of rrtname_r, fmtname_r and len_r may be 0.
+ * If fmtname_r is non-null then *fmtname_r may be null on return,
+ * indicating that no special processing is involved.
  *
- * data_r be must be non-null iff datap is.  In this case
- * *data_r will be set to point to a human-readable text
- * string representing the RR data.  The text will have
- * been obtained from malloc() and must be freed by the caller.
+ * data_r be must be non-null iff datap is.  In this case *data_r will
+ * be set to point to a string pointing to a representation of the RR
+ * data in master file format.  (The owner name, timeout, class and
+ * type will not be present - only the data part of the RR.)  The
+ * memory will have been obtained from malloc() and must be freed by
+ * the caller.
  *
  * Usually this routine will succeed.  Possible errors include:
  *  adns_s_nomemory
@@ -563,13 +765,47 @@ adns_status adns_rr_info(adns_rrtype type,
  *  adns_s_invaliddata (*datap contained garbage)
  * If an error occurs then no memory has been allocated,
  * and *rrtname_r, *fmtname_r, *len_r and *data_r are undefined.
+ *
+ * There are some adns-invented data formats which are not official
+ * master file formats.  These include:
+ *
+ * Mailboxes if __qtf_mail822: these are just included as-is.
+ *
+ * Addresses (adns_rr_addr): these may be of pretty much any type.
+ * The representation is in two parts: first, a word for the address
+ * family (ie, in AF_XXX, the XXX), and then one or more items for the
+ * address itself, depending on the format.  For an IPv4 address the
+ * syntax is INET followed by the dotted quad (from inet_ntoa).
+ * Currently only IPv4 is supported.
+ *
+ * Text strings (as in adns_rr_txt) appear inside double quotes, and
+ * use \" and \\ to represent " and \, and \xHH to represent
+ * characters not in the range 32-126.
+ *
+ * Hostname with addresses (adns_rr_hostaddr): this consists of the
+ * hostname, as usual, followed by the adns_status value, as an
+ * abbreviation, and then a descriptive string (encoded as if it were
+ * a piece of text), for the address lookup, followed by zero or more
+ * addresses enclosed in ( and ).  If the result was a permanent
+ * failure, then a single ?  appears instead of the ( ).  If the
+ * result was a temporary failure then an empty pair of parentheses
+ * appears (which a space in between).  For example, one of the NS
+ * records for greenend.org.uk comes out like
+ *  ns.chiark.greenend.org.uk ok "OK" ( INET 195.224.76.132 )
+ * an MX referring to a nonexistent host might come out like:
+ *  50 sun2.nsfnet-relay.ac.uk nxdomain "No such domain" ( )
+ * and if nameserver information is not available you might get:
+ *  dns2.spong.dyn.ml.org timeout "DNS query timed out" ?
  */
 
 const char *adns_strerror(adns_status st);
 const char *adns_errabbrev(adns_status st);
+const char *adns_errtypeabbrev(adns_status st);
 /* Like strerror but for adns_status values.  adns_errabbrev returns
  * the abbreviation of the error - eg, for adns_s_timeout it returns
- * "timeout".  You MUST NOT call these functions with status values
+ * "timeout".  adns_errtypeabbrev returns the abbreviation of the
+ * error class: ie, for values up to adns_s_max_XXX it will return the
+ * string XXX.  You MUST NOT call these functions with status values
  * not returned by the same adns library.
  */
 

@@ -1,31 +1,46 @@
 #!/bin/sh
 
+set -e
+
 failed=''
 passed=''
+skipped=''
 
 for f in case-*.sys
 do
 	case="`echo \"$f\" | sed -e 's/^case-//; s/\.sys$//'`"
-	if ./r1test $case
-	then
-		passed="$passed $case"
-	else
-		echo
+	set +e
+	./r1test $case
+	rc=$?
+	set -e
+	case $rc in
+	0)	passed="$passed $case" ;;
+	5)	skipped="$skipped $case" ;;
+	*)	echo
 		failed="$failed $case"
 		echo
-	fi
+		;;
+	esac
 done
 
 if [ "x$failed" = x ]
 then
 	echo "
-all tests passed."
+"
+	if [ "x$skipped" = x ]
+	then
+		echo "all tests passed."
+	else
+		echo "all applicable tests passed (skipped:$skipped)"
+	fi
+	echo
 	exit 0
 fi
 
 echo >&2 "
 AT LEAST ONE TEST FAILED
 passed tests:${passed:- NONE}
+skipped tests:${skipped:- NONE}
 failed tests:$failed
 "
 

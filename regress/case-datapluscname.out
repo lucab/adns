@@ -22,7 +22,7 @@ adns debug: ignoring RR with an unexpected owner 170.168.99.219.194.in-addr.arpa
 170.99.219.194.in-addr.arpa flags 292 type NS(raw): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type SOA(raw): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type PTR(raw): OK; nrrs=1; cname=$; owner=170.99.219.194.in-addr.arpa; ttl=171727
- "proxy.scoplife.gr"
+ proxy.scoplife.gr
 170.99.219.194.in-addr.arpa flags 292 type HINFO(-): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type MX(raw): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type TXT(-): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
@@ -33,7 +33,7 @@ adns debug: ignoring RR with an unexpected owner 170.168.99.219.194.in-addr.arpa
 170.99.219.194.in-addr.arpa flags 292 type SOA(822): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type RP(822): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type PTR(checked): OK; nrrs=1; cname=$; owner=170.99.219.194.in-addr.arpa; ttl=171727
- "proxy.scoplife.gr"
+ proxy.scoplife.gr
 170.99.219.194.in-addr.arpa flags 292 type CNAME(-): OK; nrrs=1; cname=$; owner=170.99.219.194.in-addr.arpa; ttl=171726
- "170.168.99.219.194.in-addr.arpa"
+ 170.168.99.219.194.in-addr.arpa
 rc=0

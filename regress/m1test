@@ -22,6 +22,9 @@ initstring="`cat init-$initfile.text`"
 echo $initfile $initflags >"$case.sys"
 echo "$queryargs" >>"$case.sys"
 
+EF_DISABLE_BANNER=1
+export EF_DISABLE_BANNER
+
 echo running hrecord $initflags "/... $queryargs"
 set +e
 ADNS_TEST_OUT_FD=3 3>>"$case.sys" >"$case.out" 2>"$case.err" </dev/null \

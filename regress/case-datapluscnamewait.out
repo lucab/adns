@@ -19,9 +19,9 @@ adns debug: ignoring RR with an unexpected owner 170.168.99.219.194.in-addr.arpa
 adns debug: ignoring CNAME (to 170.168.99.219.194.in-addr.arpa) coexisting with RR (QNAME=170.99.219.194.in-addr.arpa, QTYPE=PTR(checked), NS=172.18.45.6)
 adns debug: ignoring RR with an unexpected owner 170.168.99.219.194.in-addr.arpa (QNAME=170.99.219.194.in-addr.arpa, QTYPE=PTR(checked), NS=172.18.45.6)
 170.99.219.194.in-addr.arpa flags 292 type PTR(raw): OK; nrrs=1; cname=$; owner=170.99.219.194.in-addr.arpa; ttl=171763
- "proxy.scoplife.gr"
+ proxy.scoplife.gr
 170.99.219.194.in-addr.arpa flags 292 type PTR(checked): OK; nrrs=1; cname=$; owner=170.99.219.194.in-addr.arpa; ttl=171763
- "proxy.scoplife.gr"
+ proxy.scoplife.gr
 170.99.219.194.in-addr.arpa flags 292 type A(-): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=600
 170.99.219.194.in-addr.arpa flags 292 type MX(raw): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
 170.99.219.194.in-addr.arpa flags 292 type RP(raw): No such data; nrrs=0; cname=170.168.99.219.194.in-addr.arpa; owner=170.99.219.194.in-addr.arpa; ttl=0
@@ -74,5 +74,5 @@ adns debug: reply not found, id 3120, query owner 170.168.99.219.194.in-addr.arp
 adns debug: reply not found, id 311f, query owner 170.168.99.219.194.in-addr.arpa (NS=172.18.45.6)
 adns debug: reply not found, id 312c, query owner 170.168.99.219.194.in-addr.arpa (NS=172.18.45.6)
 170.99.219.194.in-addr.arpa flags 292 type CNAME(-): OK; nrrs=1; cname=$; owner=170.99.219.194.in-addr.arpa; ttl=110056
- "170.168.99.219.194.in-addr.arpa"
+ 170.168.99.219.194.in-addr.arpa
 rc=0

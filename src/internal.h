@@ -5,7 +5,12 @@
  * - comments regarding library data structures
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,10 +38,12 @@ typedef unsigned char byte;
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
+#include <string.h>
 
 #include <sys/time.h>
 
 #include "adns.h"
+#include "dlist.h"
 
 /* Configuration and constants */
 
@@ -57,6 +64,12 @@ typedef unsigned char byte;
 #define DNS_INADDR_ARPA "in-addr", "arpa"
 
 #define MAX_POLLFDS  ADNS_POLLFDS_RECOMMENDED
+
+typedef enum {
+  cc_user,
+  cc_entex,
+  cc_freq
+} consistency_checks;
 
 typedef enum {
   rcode_noerror,
@@ -205,14 +218,14 @@ struct adns__query {
 
   /* Possible states:
    *
-   *  state   Queue   child  id   nextudpserver  sentudp     failedtcp
+   *  state   Queue   child  id   nextudpserver  udpsent     tcpfailed
    *				  
    *  tosend  NONE    null   >=0  0              zero        zero
    *  tosend  timew   null   >=0  any            nonzero     zero
    *  tosend  NONE    null   >=0  any            nonzero     zero
    *				  
-   *  tcpwait timew   null   >=0  irrelevant     zero        any
-   *  tcpsent timew   null   >=0  irrelevant     zero        any
+   *  tcpwait timew   null   >=0  irrelevant     any         any
+   *  tcpsent timew   null   >=0  irrelevant     any         any
    *				  
    *  child   childw  set    >=0  irrelevant     irrelevant  irrelevant
    *  child   NONE    null   >=0  irrelevant     irrelevant  irrelevant
@@ -267,7 +280,7 @@ struct adns__state {
   adns_query forallnext;
   int nextid, udpsocket, tcpsocket;
   vbuf tcpsend, tcprecv;
-  int nservers, nsortlist, nsearchlist, searchndots, tcpserver;
+  int nservers, nsortlist, nsearchlist, searchndots, tcpserver, tcprecv_skip;
   enum adns__tcpstate { server_disconnected, server_connecting, server_ok } tcpstate;
   struct timeval tcptimeout;
   struct sigaction stdsigpipe;
@@ -619,7 +632,10 @@ void adns__tcp_closenext(adns_state ads);
 void adns__tcp_tryconnect(adns_state ads, struct timeval now);
 
 void adns__autosys(adns_state ads, struct timeval now);
-/* Make all the system calls we want to if the application wants us to. */
+/* Make all the system calls we want to if the application wants us to.
+ * Must not be called from within adns internal processing functions,
+ * lest we end up in recursive descent !
+ */
 
 void adns__must_gettimeofday(adns_state ads, const struct timeval **now_io,
 			     struct timeval *tv_buf);
@@ -632,6 +648,14 @@ void adns__fdevents(adns_state ads,
 		    int maxfd, const fd_set *readfds,
 		    const fd_set *writefds, const fd_set *exceptfds,
 		    struct timeval now, int *r_r);
+int adns__internal_check(adns_state ads,
+			 adns_query *query_io,
+			 adns_answer **answer,
+			 void **context_r);
+
+/* From check.c: */
+
+void adns__consistency(adns_state ads, adns_query qu, consistency_checks cc);
 
 /* Useful static inline functions: */
 
@@ -650,6 +674,7 @@ static inline int ctype_digit(int c) { return c>='0' && c<='9'; }
 static inline int ctype_alpha(int c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
+static inline int ctype_822special(int c) { return strchr("()<>@,;:\\\".[]",c) != 0; }
 
 static inline int errno_resources(int e) { return e==ENOMEM || e==ENOBUFS; }
 
@@ -658,28 +683,6 @@ static inline int errno_resources(int e) { return e==ENOMEM || e==ENOBUFS; }
 #define MEM_ROUND(sz) \
   (( ((sz)+sizeof(union maxalign)-1) / sizeof(union maxalign) ) \
    * sizeof(union maxalign) )
-
-#define LIST_INIT(list) ((list).head= (list).tail= 0)
-#define LINK_INIT(link) ((link).next= (link).back= 0)
-
-#define LIST_UNLINK_PART(list,node,part) \
-  do { \
-    if ((node)->part back) (node)->part back->part next= (node)->part next; \
-      else                                  (list).head= (node)->part next; \
-    if ((node)->part next) (node)->part next->part back= (node)->part back; \
-      else                                  (list).tail= (node)->part back; \
-  } while(0)
-
-#define LIST_LINK_TAIL_PART(list,node,part) \
-  do { \
-    (node)->part next= 0; \
-    (node)->part back= (list).tail; \
-    if ((list).tail) (list).tail->part next= (node); else (list).head= (node); \
-    (list).tail= (node); \
-  } while(0)
-
-#define LIST_UNLINK(list,node) LIST_UNLINK_PART(list,node,)
-#define LIST_LINK_TAIL(list,node) LIST_LINK_TAIL_PART(list,node,)
 
 #define GETIL_B(cb) (((dgram)[(cb)++]) & 0x0ff)
 #define GET_B(cb,tv) ((tv)= GETIL_B((cb)))

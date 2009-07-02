@@ -3,7 +3,12 @@
  * - main handling and parsing routine for received datagrams
  */
 /*
- *  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+ *  This file is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *
+ *  It is part of adns, which is
+ *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +26,6 @@
  */
 
 #include <stdlib.h>
-#include <string.h>
 
 #include "internal.h"
     
@@ -168,9 +172,11 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	adns__query_fail(qu,adns_s_prohibitedcname);
 	return;
       } else if (qu->cname_dgram) { /* Ignore second and subsequent CNAME(s) */
-	adns__debug(ads,serv,qu,"ignoring duplicate CNAME (%s, as well as %s)",
-		    adns__diag_domain(ads,serv,qu, &qu->vb, dgram,dglen,rdstart),
-		    qu->answer->cname);
+	adns__debug(ads,serv,qu,"allegedly canonical name %s is actually alias for %s",
+		    qu->answer->cname,
+		    adns__diag_domain(ads,serv,qu, &qu->vb, dgram,dglen,rdstart));
+	adns__query_fail(qu,adns_s_prohibitedcname);
+	return;
       } else if (wantedrrs) { /* Ignore CNAME(s) after RR(s). */
 	adns__debug(ads,serv,qu,"ignoring CNAME (to %s) coexisting with RR",
 		    adns__diag_domain(ads,serv,qu, &qu->vb, dgram,dglen,rdstart));

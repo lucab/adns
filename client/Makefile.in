@@ -1,6 +1,11 @@
 # client/Makefile - client program(s) Makefile
 # 
-#  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+#  This file is
+#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+#
+#  It is part of adns, which is
+#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+#    Copyright (C) 1999 Tony Finch <dot@dotat.at>
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,12 +24,19 @@
 srcdir=		@srcdir@
 VPATH=		@srcdir@
 
-TARG_LOCAL=	adnstest_s
-TARG_INSTALL=	adnstest
+PROGRAMS=	adnstest adnslogres adnshost
+TARG_INSTALL=	$(PROGRAMS)
+TARG_LOCAL=	$(addsuffix _s, $(PROGRAMS))
 TARGETS=	$(TARG_LOCAL) $(TARG_INSTALL)
 include		$(srcdir)/../settings.make
 
 DIRCFLAGS=	-I$(srcdir)/../src
+
+ADH_OBJS=	adh-main.o adh-opts.o adh-query.o
+
+STATIC_LIB=	$(srcdir)/../src/libadns.a
+DYNAMIC_DEP=	$(srcdir)/../dynamic/$(SHLIBFILE)
+DYNAMIC_LINK=	-L$(srcdir)/../dynamic -ladns
 
 all:		$(TARGETS)
 
@@ -35,7 +47,16 @@ install:	$(TARG_INSTALL)
 uninstall:
 		for f in $(TARGETS); do rm -f $(bin_dir)/$$f; done
 
-adnstest:	adnstest.o $(srcdir)/../dynamic/$(SHLIBFILE)
+$(ADH_OBJS):	adnshost.h
 
-adnstest_s:	adnstest.o $(srcdir)/../src/libadns.a
-		$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+adnshost:	$(ADH_OBJS) $(DYNAMIC_DEP)
+		$(CC) $(LDFLAGS) $(ADH_OBJS) $(DYNAMIC_LINK) -o $@ $(LDLIBS)
+
+adnshost_s:	$(ADH_OBJS) $(STATIC_LIB)
+		$(CC) $(LDFLAGS) $(ADH_OBJS) $(STATIC_LIB) -o $@ $(LDLIBS)
+
+%:		%.o $(DYNAMIC_DEP)
+		$(CC) $(LDFLAGS) $< $(DYNAMIC_LINK) -o $@ $(LDLIBS)
+
+%_s:		%.o $(STATIC_LIB)
+		$(CC) $(LDFLAGS) $< $(STATIC_LIB) -o $@ $(LDLIBS)
