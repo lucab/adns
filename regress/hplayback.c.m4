@@ -150,6 +150,7 @@ static void Pfdset(fd_set *set, int max) {
   }
 }
 
+#ifdef HAVE_POLL
 static int Ppollfdevents(void) {
   int events;
 
@@ -190,6 +191,7 @@ static void Ppollfds(struct pollfd *fds, int nfds) {
   }
   if (vb2.buf[vb2.used++] != hm_squote]hm_squote) Psyntax("pollfds end not ]");
 }
+#endif
 
 static void Paddr(struct sockaddr *addr, int *lenr) {
   struct sockaddr_in *sa= (struct sockaddr_in*)addr;

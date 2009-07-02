@@ -1,8 +1,0 @@
-syscallr  close=OK
-syscallr  recvfrom=EAGAIN
-syscallr  recvfrom=OK addr=172.18.45.6:53
-syscallr  select=1 rfds=[4] wfds=[] efds=[]
-syscallr  sendto=59
-syscallr  fcntl=OK
-syscallr  fcntl=~O_NONBLOCK&...
-syscallr  socket=4

@@ -49,6 +49,7 @@ void Qselect(
   else Tvba(" to=null"); 
   Q_vb();
 }
+#ifdef HAVE_POLL
 void Qpoll(
 	const struct pollfd *fds , int nfds , int timeout 
 	) {
@@ -58,6 +59,7 @@ void Qpoll(
 	Tvbf(" timeout=%d",timeout); 
   Q_vb();
 }
+#endif
 void Qsocket(
 	 int type 
 	) {

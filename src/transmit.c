@@ -211,12 +211,12 @@ static void query_usetcp(adns_query qu, struct timeval now) {
   adns__tcp_tryconnect(qu->ads,now);
 }
 
-void adns__query_udp(adns_query qu, struct timeval now) {
+void adns__query_send(adns_query qu, struct timeval now) {
   struct sockaddr_in servaddr;
   int serv, r;
   adns_state ads;
 
-  assert(qu->state == query_udp);
+  assert(qu->state == query_tosend);
   if ((qu->flags & adns_qf_usevc) || (qu->query_dglen > DNS_MAXUDP)) {
     query_usetcp(qu,now);
     return;

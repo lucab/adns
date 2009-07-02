@@ -125,7 +125,8 @@ int main(int argc, char *const *argv) {
   char *show, *cp;
   int len, i, qc, qi, tc, ti, ch, qflags, initflagsnum, npollfds, npollfdsavail, timeout;
   struct pollfd *pollfds;
-  adns_status r, ri;
+  adns_status ri;
+  int r;
   const adns_rrtype *types;
   struct timeval now;
   adns_rrtype *types_a;
@@ -223,7 +224,7 @@ int main(int argc, char *const *argv) {
 
       fprintf(stdout,"%s flags %d type %d",domain,qflags,types[ti]);
       r= adns_submit(ads,domain,types[ti],qflags,mc,&mc->qu);
-      if (r == adns_s_unknownrrtype) {
+      if (r == ENOSYS) {
 	fprintf(stdout," not implemented\n");
 	mc->qu= 0;
 	mc->doneyet= 1;
@@ -319,8 +320,8 @@ int main(int argc, char *const *argv) {
     if (ans->nrrs) {
       assert(!ri);
       for (i=0; i<ans->nrrs; i++) {
-	r= adns_rr_info(ans->type, 0,0,0, ans->rrs.bytes + i*len, &show);
-	if (r) failure_status("info",r);
+	ri= adns_rr_info(ans->type, 0,0,0, ans->rrs.bytes + i*len, &show);
+	if (ri) failure_status("info",ri);
 	fprintf(stdout," %s\n",show);
 	free(show);
       }

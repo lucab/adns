@@ -211,6 +211,7 @@ static const struct sinfo {
 
   SINFO(  nomemory,            "Out of memory"                                 ),
   SINFO(  unknownrrtype,       "Query not implemented in DNS library"          ),
+  SINFO(  systemfail,          "General resolver or system failure"            ),
 
   SINFO(  timeout,             "DNS query timed out"                           ),
   SINFO(  allservfail,         "All nameservers failed"                        ),

@@ -42,12 +42,13 @@ static adns_query query_alloc(adns_state ads, const typeinfo *typei,
   qu->answer= malloc(sizeof(*qu->answer));  if (!qu->answer) { free(qu); return 0; }
   
   qu->ads= ads;
-  qu->state= query_udp;
+  qu->state= query_tosend;
   qu->back= qu->next= qu->parent= 0;
   LIST_INIT(qu->children);
   LINK_INIT(qu->siblings);
   LIST_INIT(qu->allocations);
   qu->interim_allocd= 0;
+  qu->preserved_allocd= 0;
   qu->final_allocspace= 0;
 
   qu->typei= typei;
@@ -99,7 +100,7 @@ static void query_submit(adns_state ads, adns_query qu,
   qu->query_dglen= qu->vb.used;
   memcpy(qu->query_dgram,qu->vb.buf,qu->vb.used);
   
-  adns__query_udp(qu,now);
+  adns__query_send(qu,now);
   adns__autosys(ads,now);
 }
 
@@ -181,7 +182,7 @@ static int save_owner(adns_query qu, const char *owner, int ol) {
   ans= qu->answer;
   assert(!ans->owner);
 
-  ans->owner= adns__alloc_interim(qu,ol+1);  if (!ans->owner) return 0;
+  ans->owner= adns__alloc_preserved(qu,ol+1);  if (!ans->owner) return 0;
 
   memcpy(ans->owner,owner,ol);
   ans->owner[ol]= 0;
@@ -202,7 +203,7 @@ int adns_submit(adns_state ads,
   const char *p;
 
   typei= adns__findtype(type);
-  if (!typei) return adns_s_unknownrrtype;
+  if (!typei) return ENOSYS;
 
   r= gettimeofday(&now,0); if (r) goto x_errno;
   qu= query_alloc(ads,typei,flags,now); if (!qu) goto x_errno;
@@ -277,9 +278,23 @@ static void *alloc_common(adns_query qu, size_t sz) {
 }
 
 void *adns__alloc_interim(adns_query qu, size_t sz) {
+  void *rv;
+  
   sz= MEM_ROUND(sz);
+  rv= alloc_common(qu,sz);
+  if (!rv) return 0;
   qu->interim_allocd += sz;
-  return alloc_common(qu,sz);
+  return rv;
+}
+
+void *adns__alloc_preserved(adns_query qu, size_t sz) {
+  void *rv;
+  
+  sz= MEM_ROUND(sz);
+  rv= adns__alloc_interim(qu,sz);
+  if (!rv) return 0;
+  qu->preserved_allocd += sz;
+  return rv;
 }
 
 void *adns__alloc_mine(adns_query qu, size_t sz) {
@@ -330,12 +345,12 @@ static void cancel_children(adns_query qu) {
   LIST_INIT(qu->children);
 }
 
-void adns__reset_cnameonly(adns_query qu) {
+void adns__reset_preserved(adns_query qu) {
   assert(!qu->final_allocspace);
   cancel_children(qu);
   qu->answer->nrrs= 0;
   qu->answer->rrs.untyped= 0;
-  qu->interim_allocd= qu->answer->cname ? MEM_ROUND(strlen(qu->answer->cname)+1) : 0;
+  qu->interim_allocd= qu->preserved_allocd;
 }
 
 static void free_query_allocs(adns_query qu) {
@@ -348,7 +363,7 @@ static void free_query_allocs(adns_query qu) {
 
 void adns_cancel(adns_query qu) {
   switch (qu->state) {
-  case query_udp: case query_tcpwait: case query_tcpsent:
+  case query_tosend: case query_tcpwait: case query_tcpsent:
     LIST_UNLINK(qu->ads->timew,qu);
     break;
   case query_child:
@@ -401,15 +416,20 @@ static void makefinal_query(adns_query qu) {
   return;
   
  x_nomem:
-  qu->answer->status= adns_s_nomemory;
+  qu->preserved_allocd= 0;
   qu->answer->cname= 0;
-  adns__reset_cnameonly(qu);
+  qu->answer->owner= 0;
+  adns__reset_preserved(qu); /* (but we just threw away the preserved stuff) */
+
+  qu->answer->status= adns_s_nomemory;
   free_query_allocs(qu);
 }
 
 void adns__query_done(adns_query qu) {
   adns_answer *ans;
   adns_query parent;
+
+  cancel_children(qu);
 
   qu->id= -1;
   ans= qu->answer;
@@ -437,7 +457,7 @@ void adns__query_done(adns_query qu) {
   parent= qu->parent;
   if (parent) {
     LIST_UNLINK_PART(parent->children,qu,siblings.);
-    if (!parent->children.head) LIST_UNLINK(qu->ads->childw,parent);
+    LIST_UNLINK(qu->ads->childw,parent);
     qu->ctx.callback(parent,qu);
     free_query_allocs(qu);
     free(qu);
@@ -448,7 +468,7 @@ void adns__query_done(adns_query qu) {
 }
 
 void adns__query_fail(adns_query qu, adns_status stat) {
-  adns__reset_cnameonly(qu);
+  adns__reset_preserved(qu);
   qu->answer->status= stat;
   adns__query_done(qu);
 }

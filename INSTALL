@@ -18,7 +18,7 @@ libtool.  I'm not interested in supporting non-ELF shared libraries.
 However, if you send me an appropriate patch I'd be willing to make it
 easy or automatic to disable the ELF shared library arrangements.
 
-You may find that GNU Make is required.
+You will probably find that GNU Make is required.
 
 
 COPYRIGHT

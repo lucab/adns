@@ -1,7 +1,8 @@
-DNSSEC compatibility
- - be able to retreive KEY and SIG RRs
-
-DNSSEC functionality
- - provide security
-
-Easy-to-use query tool
+WISHLIST:
+* Easy way to make a reverse query.
+* `fake' reverse queries (give nnn.nnn.nnn.nnn either always or on error)
+* `fake' forward queries (allow nnn.nnn.nnn.nnn -> A)
+* DNSSEC compatibility - be able to retreive KEY and SIG RRs
+* DNSSEC minimum functionality - ignore Additional when AD set.
+* DNSSEC functionality - provide security ?
+* Easy-to-use scripting query tool

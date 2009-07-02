@@ -19,7 +19,7 @@
  *  along with this program; if not, write to the Free Software Foundation,
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- *  $Id: adns.h,v 1.54 1999/07/14 22:47:16 ian Exp $
+ *  $Id: adns.h,v 1.55 1999/08/05 00:03:24 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
@@ -32,6 +32,9 @@ extern "C" { /* I really dislike this - iwj. */
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 /* All struct in_addr anywhere in adns are in NETWORK byte order. */
 
@@ -300,6 +303,9 @@ void adns_cancel(adns_query query);
  * first adns_submit or _transact call using the same adns_state after
  * it became invalid, so you may compare it for equality with other
  * query handles until you next call _query or _transact.
+ *
+ * _submit and _synchronous return ENOSYS if they don't understand the
+ * query type.
  */
 
 void adns_finish(adns_state ads);

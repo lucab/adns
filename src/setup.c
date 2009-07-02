@@ -441,6 +441,7 @@ static int init_begin(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
 
   ads->iflags= flags;
   ads->diagfile= diagfile;
+  ads->configerrno= 0;
   LIST_INIT(ads->timew);
   LIST_INIT(ads->childw);
   LIST_INIT(ads->output);
@@ -450,10 +451,10 @@ static int init_begin(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
   adns__vbuf_init(&ads->tcpsend);
   adns__vbuf_init(&ads->tcprecv);
   ads->nservers= ads->nsortlist= ads->nsearchlist= ads->tcpserver= 0;
-  ads->tcpstate= server_disconnected;
-  ads->searchlist= 0;
   ads->searchndots= 1;
+  ads->tcpstate= server_disconnected;
   timerclear(&ads->tcptimeout);
+  ads->searchlist= 0;
 
   *ads_r= ads;
   return 0;
@@ -581,14 +582,27 @@ adns_query adns_forallqueries_next(adns_state ads, void **context_r) {
   for (;;) {
     qu= nqu;
     if (!qu) return 0;
-    nqu=
-      qu->next ? qu->next :
-      qu == ads->timew.tail ? (ads->childw.head ? ads->childw.head : ads->output.head) :
-      qu == ads->childw.tail ? ads->output.head :
-      0;
+    if (qu->next) {
+      nqu= qu->next;
+    } else if (qu == ads->timew.tail) {
+      if (ads->childw.head) {
+	nqu= ads->childw.head;
+      } else {
+	nqu= ads->output.head;
+      }
+    } else if (qu == ads->childw.tail) {
+      nqu= ads->output.head;
+    } else {
+      nqu= 0;
+    }
     if (!qu->parent) break;
   }
   ads->forallnext= nqu;
   if (context_r) *context_r= qu->ctx.ext;
   return qu;
+}
+
+void adns__checkqueues(adns_state ads) {
+  adns_forallqueries_begin(ads);
+  while (adns_forallqueries_next(ads,0));
 }

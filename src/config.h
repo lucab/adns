@@ -27,6 +27,7 @@
 #ifdef HAVE_POLL
 #include <sys/poll.h>
 #else
+/* kludge it up */
 struct pollfd { int fd; short events; short revents; };
 #define POLLIN  1
 #define POLLPRI 2

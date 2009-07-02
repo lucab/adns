@@ -4,15 +4,19 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <sys/poll.h>
 #include "internal.h"
+#ifdef HAVE_POLL
+#include <sys/poll.h>
+#endif
 /* We override several system calls with #define's */
 int Hselect(
 	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 
 	);
+#ifdef HAVE_POLL
 int Hpoll(
 	struct pollfd *fds , int nfds , int timeout 
 	);
+#endif
 int Hsocket(
 	int domain , int type , int protocol 
 	);
@@ -46,9 +50,11 @@ int Hgettimeofday(struct timeval *tv, struct timezone *tz);
 void Qselect(
 	int max , const fd_set *rfds , const fd_set *wfds , const fd_set *efds , struct timeval *to 
 	);
+#ifdef HAVE_POLL
 void Qpoll(
 	const struct pollfd *fds , int nfds , int timeout 
 	);
+#endif
 void Qsocket(
 	 int type 
 	);

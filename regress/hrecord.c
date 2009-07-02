@@ -63,6 +63,7 @@ int Hselect(
  errno= e;
  return r;
 }
+#ifdef HAVE_POLL
 int Hpoll(
 	struct pollfd *fds , int nfds , int timeout 
 	) {
@@ -85,6 +86,7 @@ int Hpoll(
  errno= e;
  return r;
 }
+#endif
 int Hsocket(
 	int domain , int type , int protocol 
 	) {

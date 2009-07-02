@@ -1,3 +1,27 @@
+adns (0.4) unstable; urgency=high
+
+  General important bugfixes:
+  * make _qf_owner work if _qf_search not specified, and test it (oops!)
+  * ads->configerrno now initialised (in setup.c).
+  * timercmp(,,<=) doesn't work - use !timercmp(,,>).
+  * Changed memory semantics of internal queries to fix bugs.
+  * Restarting a TCP-using query (eg due to CNAME) doesn't abort.
+  
+  Fixes for handling of broken kinds of reply:
+  * Only accept a reply from the subset of servers we sent the query.
+  * Ignore CNAME(s) in answer after RR(s) (and test).
+
+  Other bugfixes and improvements:
+  * adns_s_systemfail is in table of errors (for eg adns_strerror).
+  * Do not ship config.cache, Makefile, etc.
+  * Improvements to install instructions, TODO, etc.
+  * Regression tests compile on systems without poll(2).
+  * Do not install adnstest_s.
+  * _submit returns ENOSYS, not adns_s_unknownquery; documented, tested.
+  * <adns.h> includes <sys/types.h>, <sys/time.h>, <unistd.h>.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 5 Aug 1999 01:17:38 +0100
+
 adns (0.3) unstable; urgency=low
 
   Incompatible changes:

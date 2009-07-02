@@ -106,6 +106,7 @@ static void Pfdset(fd_set *set, int max) {
     if (c != ',') Psyntax("fd set separator not ,");
   }
 }
+#ifdef HAVE_POLL
 static int Ppollfdevents(void) {
   int events;
   if (Pstring_maybe("0")) return 0;
@@ -140,6 +141,7 @@ static void Ppollfds(struct pollfd *fds, int nfds) {
   }
   if (vb2.buf[vb2.used++] != ']') Psyntax("pollfds end not ]");
 }
+#endif
 static void Paddr(struct sockaddr *addr, int *lenr) {
   struct sockaddr_in *sa= (struct sockaddr_in*)addr;
   char *p, *ep;
@@ -236,6 +238,7 @@ int Hselect(
  P_updatetime();
  return r;
 }
+#ifdef HAVE_POLL
 int Hpoll(
 	struct pollfd *fds , int nfds , int timeout 
 	) {
@@ -268,6 +271,7 @@ int Hpoll(
  P_updatetime();
  return r;
 }
+#endif
 int Hsocket(
 	int domain , int type , int protocol 
 	) {

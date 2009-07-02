@@ -421,13 +421,18 @@ static adns_status pap_findaddrs(const parseinfo *pai, adns_rr_hostaddr *ha,
 static void icb_hostaddr(adns_query parent, adns_query child) {
   adns_answer *cans= child->answer;
   adns_rr_hostaddr *rrp= child->ctx.info.hostaddr;
+  adns_state ads= parent->ads;
 
   rrp->astatus= cans->status;
   rrp->naddrs= cans->nrrs;
   rrp->addrs= cans->rrs.addr;
   adns__transfer_interim(child, parent, rrp->addrs, rrp->naddrs*sizeof(adns_rr_addr));
 
-  if (!parent->children.head) adns__query_done(parent);
+  if (parent->children.head) {
+    LIST_LINK_TAIL(ads->childw,parent);
+  } else {
+    adns__query_done(parent);
+  }
 }
 
 static adns_status pap_hostaddr(const parseinfo *pai, int *cbyte_io,
@@ -634,6 +639,7 @@ static adns_status cs_inthostaddr(vbuf *vb, const void *datap) {
 static void icb_ptr(adns_query parent, adns_query child) {
   adns_answer *cans= child->answer;
   const adns_rr_addr *queried, *found;
+  adns_state ads= parent->ads;
   int i;
 
   if (cans->status == adns_s_nxdomain || cans->status == adns_s_nodata) {
@@ -648,8 +654,13 @@ static void icb_ptr(adns_query parent, adns_query child) {
   for (i=0, found=cans->rrs.addr; i<cans->nrrs; i++, found++) {
     if (queried->len == found->len &&
 	!memcmp(&queried->addr,&found->addr,queried->len)) {
-      if (!parent->children.head) adns__query_done(parent);
-      return;
+      if (!parent->children.head) {
+	adns__query_done(parent);
+	return;
+      } else {
+	LIST_LINK_TAIL(ads->childw,parent);
+	return;
+      }
     }
   }
 
@@ -720,7 +731,6 @@ static adns_status pa_ptr(const parseinfo *pai, int dmstart, int max, void *data
 
   nqu->parent= pai->qu;
   LIST_LINK_TAIL_PART(pai->qu->children,nqu,siblings.);
-  
   return adns_s_ok;
 }
 

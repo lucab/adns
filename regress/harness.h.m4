@@ -27,9 +27,12 @@ m4_include(hmacros.i4)
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <sys/poll.h>
 
 #include "internal.h"
+
+#ifdef HAVE_POLL
+#include <sys/poll.h>
+#endif
 
 /* We override several system calls with #define's */
 

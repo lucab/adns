@@ -26,7 +26,7 @@
 #include "internal.h"
     
 void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
-		     int serv, struct timeval now) {
+		     int serv, int viatcp, struct timeval now) {
   int cbyte, rrstart, wantedrrs, rri, foundsoa, foundns, cname_here;
   int id, f1, f2, qdcount, ancount, nscount, arcount;
   int flg_ra, flg_rd, flg_tc, flg_qr, opcode;
@@ -89,6 +89,12 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	       dgram+DNS_HDRSIZE,
 	       qu->query_dglen-DNS_HDRSIZE))
       continue;
+    if (viatcp) {
+      if (qu->state != query_tcpsent) continue;
+    } else {
+      if (qu->state != query_tosend) continue;
+      if (!(qu->udpsent & (1<<serv))) continue;
+    }
     break;
   }
   if (!qu) {
@@ -161,7 +167,14 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
       if (qu->flags & adns_qf_cname_forbid) {
 	adns__query_fail(qu,adns_s_prohibitedcname);
 	return;
-      } else if (!qu->cname_dgram) { /* Ignore second and subsequent CNAMEs */
+      } else if (qu->cname_dgram) { /* Ignore second and subsequent CNAME(s) */
+	adns__debug(ads,serv,qu,"ignoring duplicate CNAME (%s, as well as %s)",
+		    adns__diag_domain(ads,serv,qu, &qu->vb, dgram,dglen,rdstart),
+		    qu->answer->cname);
+      } else if (wantedrrs) { /* Ignore CNAME(s) after RR(s). */
+	adns__debug(ads,serv,qu,"ignoring CNAME (to %s) coexisting with RR",
+		    adns__diag_domain(ads,serv,qu, &qu->vb, dgram,dglen,rdstart));
+      } else {
 	qu->cname_begin= rdstart;
 	qu->cname_dglen= dglen;
 	st= adns__parse_domain(ads,serv,qu, &qu->vb,
@@ -170,7 +183,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	if (!qu->vb.used) goto x_truncated;
 	if (st) { adns__query_fail(qu,st); return; }
 	l= strlen(qu->vb.buf)+1;
-	qu->answer->cname= adns__alloc_interim(qu,l);
+	qu->answer->cname= adns__alloc_preserved(qu,l);
 	if (!qu->answer->cname) { adns__query_fail(qu,adns_s_nomemory); return; }
 
 	qu->cname_dgram= adns__alloc_mine(qu,dglen);
@@ -184,10 +197,6 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	 * TCP.  If there is no truncation we can use the whole answer if
 	 * it contains the relevant info.
 	 */
-      } else {
-	adns__debug(ads,serv,qu,"ignoring duplicate CNAME (%s, as well as %s)",
-		    adns__diag_domain(ads,serv,qu, &qu->vb, dgram,dglen,rdstart),
-		    qu->answer->cname);
       }
     } else if (rrtype == (qu->typei->type & adns__rrt_typemask)) {
       wantedrrs++;
@@ -307,7 +316,6 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     LIST_LINK_TAIL(ads->childw,qu);
     return;
   }
-
   adns__query_done(qu);
   return;
 
@@ -321,7 +329,6 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
   qu->flags |= adns_qf_usevc;
   
  x_restartquery:
-  
   if (qu->cname_dgram) {
     st= adns__mkquery_frdgram(qu->ads,&qu->vb,&qu->id,
 			      qu->cname_dgram, qu->cname_dglen, qu->cname_begin,
@@ -336,6 +343,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     memcpy(newquery,qu->vb.buf,qu->vb.used);
   }
   
-  adns__reset_cnameonly(qu);
-  adns__query_udp(qu,now);
+  if (qu->state == query_tcpsent) qu->state= query_tosend;
+  adns__reset_preserved(qu);
+  adns__query_send(qu,now);
 }

@@ -16,8 +16,7 @@
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
 
-DISTVERSION=	0.3
-
+DISTVERSION=	0.4
 srcdir=		@srcdir@
 VPATH=		@srcdir@
 
@@ -47,6 +46,7 @@ dist:			distprep
 		sed -e 's#.*#mkdir -p $(dist_tmp)/&#' | sh
 	find \( -name CVS -o -name dist_tmp* \) -prune -o -type f -print | \
 		sed -e 's#.*#ln & $(dist_tmp)/&#' | sh
+	$(MAKE) -C dist_tmp/adns-$(DISTVERSION) distclean
 	cd dist_tmp && tar cf ../$(dist_tmp).tar `basename $(dist_tmp)`
 	gzip -9 $(dist_tmp).tar
 	mv $(dist_tmp).tar.gz .

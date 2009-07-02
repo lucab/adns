@@ -151,12 +151,12 @@ typedef struct {
 
 struct adns__query {
   adns_state ads;
-  enum { query_udp, query_tcpwait, query_tcpsent, query_child, query_done } state;
+  enum { query_tosend, query_tcpwait, query_tcpsent, query_child, query_done } state;
   adns_query back, next, parent;
   struct { adns_query head, tail; } children;
   struct { adns_query back, next; } siblings;
   struct { allocnode *head, *tail; } allocations;
-  int interim_allocd;
+  int interim_allocd, preserved_allocd;
   void *final_allocspace;
 
   const typeinfo *typei;
@@ -207,9 +207,9 @@ struct adns__query {
    *
    *  state   Queue   child  id   nextudpserver  sentudp     failedtcp
    *				  
-   *  udp     NONE    null   >=0  0              zero        zero
-   *  udp     timew   null   >=0  any            nonzero     zero
-   *  udp     NONE    null   >=0  any            nonzero     zero
+   *  tosend  NONE    null   >=0  0              zero        zero
+   *  tosend  timew   null   >=0  any            nonzero     zero
+   *  tosend  NONE    null   >=0  any            nonzero     zero
    *				  
    *  tcpwait timew   null   >=0  irrelevant     zero        any
    *  tcpsent timew   null   >=0  irrelevant     zero        any
@@ -285,6 +285,7 @@ struct adns__state {
 /* From setup.c: */
 
 int adns__setnonblock(adns_state ads, int fd); /* => errno value */
+void adns__checkqueues(adns_state ads); /* expensive walk, for checking */
 
 /* From general.c: */
 
@@ -363,11 +364,14 @@ void adns__query_tcp(adns_query qu, struct timeval now);
  * reestablishment and retry.
  */
 
-void adns__query_udp(adns_query qu, struct timeval now);
-/* Query must be in state udp/NONE; it will be moved to a new state,
+void adns__query_send(adns_query qu, struct timeval now);
+/* Query must be in state tosend/NONE; it will be moved to a new state,
  * and no further processing can be done on it for now.
  * (Resulting state is one of udp/timew, tcpwait/timew (if server not connected),
  *  tcpsent/timew, child/childw or done/output.)
+ * __query_send may decide to use either UDP or TCP depending whether
+ * _qf_usevc is set (or has become set) and whether the query is too
+ * large.
  */
 
 /* From query.c: */
@@ -390,12 +394,14 @@ adns_status adns__internal_submit(adns_state ads, adns_query *query_r,
  * child will already have been taken off both the global list of
  * queries in ads and the list of children in the parent.  The child
  * will be freed when the callback returns.  The parent will have been
- * taken off the global childw queue iff this is the last child for
- * that parent.  If there is no error detected in the callback, then
- * it should call adns__query_done if and only if there are no more
- * children (by checking parent->children.head).  If an error is
- * detected in the callback it should call adns__query_fail and any
- * remaining children will automatically be cancelled.
+ * taken off the global childw queue.
+ *
+ * The callback should either call adns__query_done, if it is
+ * complete, or adns__query_fail, if an error has occurred, in which
+ * case the other children (if any) will be cancelled.  If the parent
+ * has more unfinished children (or has just submitted more) then the
+ * callback may choose to wait for them - it must then put the parent
+ * back on the childw queue.
  */
 
 void adns__search_next(adns_state ads, adns_query qu, struct timeval now);
@@ -409,20 +415,27 @@ void adns__search_next(adns_state ads, adns_query qu, struct timeval now);
  */
 
 void *adns__alloc_interim(adns_query qu, size_t sz);
+void *adns__alloc_preserved(adns_query qu, size_t sz);
 /* Allocates some memory, and records which query it came from
  * and how much there was.
  *
- * If an error occurs in the query, all its memory is simply freed.
- *
- * If the query succeeds, one large buffer will be made which is
- * big enough for all these allocations, and then adns__alloc_final
- * will get memory from this buffer.
+ * If an error occurs in the query, all the memory from _interim is
+ * simply freed.  If the query succeeds, one large buffer will be made
+ * which is big enough for all these allocations, and then
+ * adns__alloc_final will get memory from this buffer.
  *
  * _alloc_interim can fail (and return 0).
  * The caller must ensure that the query is failed.
  *
- * adns__alloc_interim_{only,fail}(qu,0) will not return 0,
- * but it will not necessarily return a distinct pointer each time.
+ * The memory from _preserved is is kept and transferred into the
+ * larger buffer - unless we run out of memory, in which case it too
+ * is freed.  When you use _preserved you have to add code to the
+ * x_nomem error exit case in adns__makefinal_query to clear out the
+ * pointers you made to those allocations, because that's when they're
+ * thrown away; you should also make a note in the declaration of
+ * those pointer variables, to note that they are _preserved rather
+ * than _interim.  If they're in the answer, note it here:
+ *  answer->cname and answer->owner are _preserved.
  */
 
 void adns__transfer_interim(adns_query from, adns_query to, void *block, size_t sz);
@@ -452,12 +465,12 @@ void *adns__alloc_final(adns_query qu, size_t sz);
 void adns__makefinal_block(adns_query qu, void **blpp, size_t sz);
 void adns__makefinal_str(adns_query qu, char **strp);
 
-void adns__reset_cnameonly(adns_query qu);
-/* Resets all of the memory management stuff etc. to
- * take account of only the CNAME.  Used when we find an error somewhere
- * and want to just report the error (with perhaps CNAME info), and also
- * when we're halfway through RRs in a datagram and discover that we
- * need to retry the query.
+void adns__reset_preserved(adns_query qu);
+/* Resets all of the memory management stuff etc. to take account of
+ * only the _preserved stuff from _alloc_preserved.  Used when we find
+ * an error somewhere and want to just report the error (with perhaps
+ * CNAME, owner, etc. info), and also when we're halfway through RRs
+ * in a datagram and discover that we need to retry the query.
  */
 
 void adns__query_done(adns_query qu);
@@ -466,7 +479,7 @@ void adns__query_fail(adns_query qu, adns_status stat);
 /* From reply.c: */
 
 void adns__procdgram(adns_state ads, const byte *dgram, int len,
-		     int serv, struct timeval now);
+		     int serv, int viatcp, struct timeval now);
 
 /* From types.c: */
 

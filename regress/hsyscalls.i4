@@ -56,11 +56,13 @@ hm_syscall(
 	hm_arg_timeval_in_rel_null(to) hm_na
 ')
 
+#ifdef HAVE_POLL
 hm_syscall(
 	poll, `hm_rv_any', `
         hm_arg_pollfds_io(fds,nfds) hm_na
 	hm_arg_int(timeout) hm_na
 ')
+#endif
 
 hm_syscall(
 	socket, `hm_rv_fd', `
