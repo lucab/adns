@@ -231,12 +231,15 @@ default -0x16
      72046172 70610000 020001.
  sendto=43
  +0.000484
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31210100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 050001.
  sendto=43
- +0.000485
- select max=5 rfds=[4] wfds=[] efds=[] to=0.002425
+ +0.000484
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.001940
  select=1 rfds=[4] wfds=[] efds=[]
  +0.000119
  recvfrom fd=4 buflen=512 *addrlen=16
@@ -277,7 +280,7 @@ default -0x16
      312c0100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 060001.
  sendto=43
- +0.000488
+ +0.000489
  select max=5 rfds=[4] wfds=[] efds=[] to=1.980098
  select=1 rfds=[4] wfds=[] efds=[]
  +0.000131
@@ -300,17 +303,20 @@ default -0x16
      72046172 70610000 050001.
  sendto=43
  +0.000505
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31230100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 0c0001.
  sendto=43
- +0.000530
+ +0.000529
  sendto fd=4 addr=172.18.45.6:53
      31270100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 110001.
  sendto=43
  +0.000468
- select max=5 rfds=[4] wfds=[] efds=[] to=0.009497
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.008498
  select=0 rfds=[] wfds=[] efds=[]
  +0.008500
  sendto fd=4 addr=172.18.45.6:53
@@ -326,17 +332,20 @@ default -0x16
      72046172 70610000 050001.
  sendto=43
  +0.000537
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31230100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 0c0001.
  sendto=43
- +0.000485
+ +0.000484
  sendto fd=4 addr=172.18.45.6:53
      31270100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 110001.
  sendto=43
  +0.000487
- select max=5 rfds=[4] wfds=[] efds=[] to=0.009450
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.008478
  select=0 rfds=[] wfds=[] efds=[]
  +0.008478
  select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
@@ -355,17 +364,20 @@ default -0x16
      72046172 70610000 050001.
  sendto=43
  +0.000612
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31230100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 0c0001.
  sendto=43
- +0.000552
+ +0.000551
  sendto fd=4 addr=172.18.45.6:53
      31270100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 110001.
  sendto=43
  +0.000564
- select max=5 rfds=[4] wfds=[] efds=[] to=0.009474
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.008358
  select=0 rfds=[] wfds=[] efds=[]
  +0.008252
  select max=5 rfds=[4] wfds=[] efds=[] to=0.000106

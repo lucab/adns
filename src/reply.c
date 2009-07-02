@@ -4,10 +4,10 @@
  */
 /*
  *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
@@ -119,7 +119,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     return;
   case rcode_servfail:
     if (qu) adns__query_fail(qu,adns_s_rcodeservfail);
-    else adns__warn(ads,serv,qu,"server failure on unidentifiable query");
+    else adns__debug(ads,serv,qu,"server failure on unidentifiable query");
     return;
   case rcode_notimp:
     adns__warn(ads,serv,qu,"server claims not to implement our query");
@@ -280,14 +280,14 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     if (cname_here) goto x_restartquery;
 
     /* Bloody hell, I thought we asked for recursion ? */
-    if (flg_rd) {
-      adns__diag(ads,serv,qu,"server thinks we didn't ask for recursive lookup");
-    }
     if (!flg_ra) {
       adns__diag(ads,serv,qu,"server is not willing to do recursive lookups for us");
       adns__query_fail(qu,adns_s_norecurse);
     } else {
-      adns__diag(ads,serv,qu,"server claims to do recursion, but gave us a referral");
+      if (!flg_rd)
+	adns__diag(ads,serv,qu,"server thinks we didn't ask for recursive lookup");
+      else
+	adns__diag(ads,serv,qu,"server claims to do recursion, but gave us a referral");
       adns__query_fail(qu,adns_s_invalidresponse);
     }
     return;

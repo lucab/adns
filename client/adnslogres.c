@@ -5,10 +5,10 @@
 /*
  *  This file is
  *   Copyright (C) 1999 Tony Finch <dot@dotat.at>
- *   Copyright (C) 1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *   Copyright (C) 1999-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
@@ -25,12 +25,13 @@
  *  along with this program; if not, write to the Free Software Foundation,
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- * This version was originally supplied by Tony Finch, but has been
- * modified by Ian Jackson as it was incorporated into adns.
+ *  This version was originally supplied by Tony Finch, but has been
+ *  modified by Ian Jackson as it was incorporated into adns and
+ *  subsequently.
  */
 
 static const char * const cvsid =
-	"$Id: adnslogres.c,v 1.7 1999/10/15 16:46:14 ian Exp $";
+	"$Id: adnslogres.c,v 1.10 2000/04/11 21:15:39 ian Exp $";
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -57,6 +58,10 @@ static const char * const cvsid =
 static const char *progname;
 
 #define msg(fmt, args...) fprintf(stderr, "%s: " fmt "\n", progname, ##args)
+#define guard_null(str) ((str) ? (str) : "")
+
+#define sensible_ctype(type,ch) (type((unsigned char)(ch)))
+  /* isfoo() functions from ctype.h can't safely be fed char - blech ! */
 
 static void aargh(const char *cause) {
   const char *why = strerror(errno);
@@ -75,7 +80,7 @@ static char *ipaddr2domain(char *start, char **addr, char **rest) {
 
   ptrs[0]= start;
 retry:
-  while (!isdigit(*ptrs[0]))
+  while (!sensible_ctype(isdigit,*ptrs[0]))
     if (!*ptrs[0]++) {
       strcpy(buf, "invalid.");
       *addr= *rest= NULL;
@@ -83,8 +88,8 @@ retry:
     }
   for (i= 1; i < 5; i++) {
     ptrs[i]= ptrs[i-1];
-    while (isdigit(*ptrs[i]++));
-    if ((i == 4 && !isspace(ptrs[i][-1])) ||
+    while (sensible_ctype(isdigit,*ptrs[i]++));
+    if ((i == 4 && !sensible_ctype(isspace,ptrs[i][-1])) ||
 	(i != 4 && ptrs[i][-1] != '.') ||
 	(ptrs[i]-ptrs[i-1] > 4)) {
       ptrs[0]= ptrs[i]-1;
@@ -129,7 +134,7 @@ static logline *readline(FILE *inf, adns_state adns, int opts) {
     strcpy(line->start, buf);
     str= ipaddr2domain(line->start, &line->addr, &line->rest);
     if (opts & OPT_DEBUG)
-      msg("submitting %.*s -> %s", line->rest-line->addr, line->addr, str);
+      msg("submitting %.*s -> %s", line->rest-line->addr, guard_null(line->addr), str);
     if (adns_submit(adns, str, adns_r_ptr,
 		    adns_qf_quoteok_cname|adns_qf_cname_loose,
 		    NULL, &line->query))
@@ -154,7 +159,7 @@ static void proclog(FILE *inf, FILE *outf, int opts) {
   while (head) {
     if (opts & OPT_DEBUG)
       msg("%d in queue; checking %.*s", len,
-	  head->rest-head->addr, head->addr);
+	  head->rest-head->addr, guard_null(head->addr));
     if (eof || len > MAXPENDING)
       if (opts & OPT_POLL)
 	err= adns_wait_poll(adns, &head->query, &answer, NULL);

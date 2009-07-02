@@ -1,5 +1,8 @@
 INSTALLATION INSTRUCTIONS for ADNS
 
+1. Read the security note below.
+
+2. Standard GNU package build process:
    $ ./configure
    $ make
    # make install
@@ -29,14 +32,37 @@ perform badly.
 You will probably find that GNU Make is required.
 
 
+SECURITY AND PERFORMANCE - AN IMPORTANT NOTE
+
+adns is not a full-service resolver.  It does no caching of responses
+at all, and has no defence against bad nameservers or fake packets
+which appear to come from your real nameservers.  It relies on the
+full-service resolvers listed in resolv.conf to handle these tasks.
+
+For secure and reasonable operation you MUST run a full-service
+nameserver on the same system as your adns applications, or on the
+same local, fully trusted network.  You MUST only list such
+nameservers in the adns configuration (eg resolv.conf).
+
+You MUST use a firewall or other means to block packets which appear
+to come from these nameservers, but which were actually sent by other,
+untrusted, entities.
+
+Furthermore, adns is not DNSSEC-aware in this version; it doesn't
+understand even how to ask a DNSSEC-aware nameserver to perform the
+DNSSEC cryptographic signature checking.
+
+
 COPYRIGHT
 
 This file, INSTALL, contains installation instructions and other
-details for adns.
+details for adns.  It is
+ Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 
 adns is
- Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
- Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
+ Copyright (C) 1999 Tony Finch <dot@dotat.at>              [1]
+ Copyright (C) 1991 Massachusetts Institute of Technology  [2]
 
 adns is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -52,6 +78,11 @@ You should have received a copy of the GNU General Public License
 along with userv as the file COPYING; if not, email me at the address
 above or write to the Free Software Foundation, 59 Temple Place -
 Suite 330, Boston, MA 02111-1307, USA.
+
+[1] Tony Finch holds the original copyright on
+    client/adnslogres.c and client/fanftest.c.
+[2] MIT hold the original copyright on the included install-sh,
+    which came via GNU autoconf.
 
 # Local variables:
 # mode: text

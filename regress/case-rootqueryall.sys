@@ -377,10 +377,13 @@ default -,s
      31300100 00010000 00000000 00000500 01.
  sendto=17
  +0.000710
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31320100 00010000 00000000 00000c00 01.
  sendto=17
- +0.000724
+ +0.000723
  sendto fd=4 addr=172.18.45.6:53
      31330100 00010000 00000000 00000d00 01.
  sendto=17
@@ -413,7 +416,7 @@ default -,s
      313c0100 00010000 00000000 00001100 01.
  sendto=17
  +0.000681
- select max=5 rfds=[4] wfds=[] efds=[] to=1.989843
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.983502
  select=0 rfds=[] wfds=[] efds=[]
  +2.-06971
  sendto fd=4 addr=172.18.45.6:53
@@ -468,10 +471,13 @@ default -,s
      31300100 00010000 00000000 00000500 01.
  sendto=17
  +0.000709
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31320100 00010000 00000000 00000c00 01.
  sendto=17
- +0.000721
+ +0.000720
  sendto fd=4 addr=172.18.45.6:53
      31330100 00010000 00000000 00000d00 01.
  sendto=17
@@ -504,7 +510,7 @@ default -,s
      313c0100 00010000 00000000 00001100 01.
  sendto=17
  +0.000682
- select max=5 rfds=[4] wfds=[] efds=[] to=1.989780
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.983562
  select=0 rfds=[] wfds=[] efds=[]
  +2.-06911
  sendto fd=4 addr=172.18.45.6:53
@@ -559,10 +565,13 @@ default -,s
      31300100 00010000 00000000 00000500 01.
  sendto=17
  +0.000689
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31320100 00010000 00000000 00000c00 01.
  sendto=17
- +0.000743
+ +0.000742
  sendto fd=4 addr=172.18.45.6:53
      31330100 00010000 00000000 00000d00 01.
  sendto=17
@@ -595,7 +604,7 @@ default -,s
      313c0100 00010000 00000000 00001100 01.
  sendto=17
  +0.000678
- select max=5 rfds=[4] wfds=[] efds=[] to=1.990318
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.981795
  select=1 rfds=[4] wfds=[] efds=[]
  +0.010527
  recvfrom fd=4 buflen=512 *addrlen=16
@@ -870,7 +879,7 @@ default -,s
  +0.000584
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000123
+ +0.000124
  select max=5 rfds=[4] wfds=[] efds=[] to=0.361302
  select=1 rfds=[4] wfds=[] efds=[]
  +0.029558

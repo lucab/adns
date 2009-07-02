@@ -8,7 +8,7 @@
  *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
@@ -39,7 +39,7 @@
  *  applications where the whole distribution is not GPL'd, are still
  *  likely to be in violation of the GPL.  Anyone who wants to do this
  *  should contact Ian Jackson.  Please note that to avoid encouraging
- *  people to infringe the GPL as it applies the body of adns, I think
+ *  people to infringe the GPL as it applies the body of adns, Ian thinks
  *  that if you take advantage of the special exception to redistribute
  *  just adns.h under the LGPL, you should retain this paragraph in its
  *  place in the appropriate copyright statements.
@@ -51,7 +51,7 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  *
- *  $Id: adns.h,v 1.76 2000/03/02 01:34:04 ian Exp $
+ *  $Id: adns.h,v 1.79 2000/05/07 22:37:18 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
@@ -663,9 +663,10 @@ void adns_beforeselect(adns_state ads, int *maxfd, fd_set *readfds,
  * for adns_firsttimeout.  readfds, writefds, exceptfds and maxfd_io may
  * not be 0.
  *
- * If *now is not 0 then this will never actually do any I/O, or
- * change the fds that adns is using or the timeouts it wants.  In any
- * case it won't block.
+ * If now is not 0 then this will never actually do any I/O, or change
+ * the fds that adns is using or the timeouts it wants.  In any case
+ * it won't block, and it will set the timeout to zero if a query
+ * finishes in _beforeselect.
  */
 
 void adns_afterselect(adns_state ads, int maxfd, const fd_set *readfds,
@@ -810,9 +811,9 @@ adns_status adns_rr_info(adns_rrtype type,
  * hostname, as usual, followed by the adns_status value, as an
  * abbreviation, and then a descriptive string (encoded as if it were
  * a piece of text), for the address lookup, followed by zero or more
- * addresses enclosed in ( and ).  If the result was a permanent
+ * addresses enclosed in ( and ).  If the result was a temporary
  * failure, then a single ?  appears instead of the ( ).  If the
- * result was a temporary failure then an empty pair of parentheses
+ * result was a permanent failure then an empty pair of parentheses
  * appears (which a space in between).  For example, one of the NS
  * records for greenend.org.uk comes out like
  *  ns.chiark.greenend.org.uk ok "OK" ( INET 195.224.76.132 )

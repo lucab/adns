@@ -247,12 +247,15 @@ default
      64647204 61727061 00000100 01.
  sendto=45
  +0.001211
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31200100 00010000 00000000 03313730 02393903 32313903 31393407 696e2d61
      64647204 61727061 00000200 01.
  sendto=45
- +0.001067
- select max=5 rfds=[4] wfds=[] efds=[] to=0.019298
+ +0.001066
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.018231
  select=0 rfds=[] wfds=[] efds=[]
  +0.017752
  select max=5 rfds=[4] wfds=[] efds=[] to=0.000479
@@ -290,12 +293,15 @@ default
      64647204 61727061 00000f00 01.
  sendto=45
  +0.001184
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31260100 00010000 00000000 03313730 02393903 32313903 31393407 696e2d61
      64647204 61727061 00001000 01.
  sendto=45
- +0.001061
- select max=5 rfds=[4] wfds=[] efds=[] to=0.009461
+ +0.001060
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.008400
  select=0 rfds=[] wfds=[] efds=[]
  +0.007976
  select max=5 rfds=[4] wfds=[] efds=[] to=0.000424
@@ -306,12 +312,15 @@ default
      64647204 61727061 00001100 01.
  sendto=45
  +0.001097
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31280100 00010000 00000000 03313730 02393903 32313903 31393407 696e2d61
      64647204 61727061 00000100 01.
  sendto=45
- +0.000765
- select max=5 rfds=[4] wfds=[] efds=[] to=0.009230
+ +0.000764
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.008465
  select=0 rfds=[] wfds=[] efds=[]
  +0.008502
  sendto fd=4 addr=172.18.45.6:53
@@ -421,12 +430,15 @@ default
      64647204 61727061 00000100 01.
  sendto=45
  +0.000740
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31290100 00010000 00000000 03313730 02393903 32313903 31393407 696e2d61
      64647204 61727061 00000200 01.
  sendto=45
- +0.000707
- select max=5 rfds=[4] wfds=[] efds=[] to=0.038447
+ +0.000706
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.037740
  select=0 rfds=[] wfds=[] efds=[]
  +0.037284
  select max=5 rfds=[4] wfds=[] efds=[] to=0.000456

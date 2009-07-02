@@ -1,3 +1,36 @@
+adns (0.8) BETA; urgency=medium
+
+  Bugfixes:
+  * Race near adns_beforeselect which could cause infinite timeout fixed
+    (it's now less agressive, and will more often return a zero timeout.)
+  * Fixed infrequent race causing assertion failure in adns__tcp_broken
+    `ads->tcpstate == server_connecting || ads->tcpstate == server_ok'.
+  * Spurious `server failure on unidentifiable query' warning suppressed.
+  * If we get a referral, don't also always complain falsely about RD==0.
+  * adnslogres: cast chars to unsigned char before using ctype.h macros.
+  * In _beforeselect, global failure now means zero timeout, and in
+    tcp_events, really never try to do anything with the TCP connection if
+    act is zero.  This might possibly cause an infinite delay (ie, lockup)
+    if things go badly wrong *and* a really unlikely race happens.
+  * Test suite `lines of syscall left' value is correct; !0 is failure.
+
+  Portability fixes:
+  * install-sh (from autoconf 2.12 Debian r13) included.
+  * adnslogres: do not call equivalent of printf("%.*s",0,(char*)0).
+
+  Documentation improvements:
+  * Security/performance note added, about local nameservers and DNSSEC.
+  * Documented that adns_rr_info _rr_hostaddr ( ) for address list
+    means permanent failure, and ? means temporary failure.
+  * Typo (*now for now in _beforeselect description) in adns.h fixed.
+  * Copyright notices updated.
+  
+  Changes to produce more defensive code:
+  * In adns_wait, assert that the timeout is not infinite.
+  * Make qu->id start out as -2 when initially allocated.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun,  7 May 2000 23:37:13 +0100
+
 adns (0.7) BETA; urgency=medium
 
   * New adns_submit_reverse_any for eg RBL lookups, and corresponding

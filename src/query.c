@@ -6,10 +6,10 @@
  */
 /*
  *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
@@ -66,7 +66,7 @@ static adns_query query_alloc(adns_state ads, const typeinfo *typei,
   adns__vbuf_init(&qu->search_vb);
   qu->search_origlen= qu->search_pos= qu->search_doneabs= 0;
 
-  qu->id= 0;
+  qu->id= -2; /* will be overwritten with real id before we leave adns */
   qu->flags= flags;
   qu->retries= 0;
   qu->udpnextserver= 0;

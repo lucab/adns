@@ -11,6 +11,7 @@ vbuf vb;
 FILE *Toutputfile= 0;
 struct timeval currenttime;
 const struct Terrno Terrnos[]= {
+  { "EBADF",                     EBADF                        },
   { "EAGAIN",                    EAGAIN                       },
   { "EINPROGRESS",               EINPROGRESS                  },
   { "EINTR",                     EINTR                        },

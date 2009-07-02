@@ -3,10 +3,10 @@ m4_dnl (part of complex test harness, not of the library)
 m4_dnl - playback routines
 
 m4_dnl  This file is
-m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 m4_dnl
 m4_dnl  It is part of adns, which is
-m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 m4_dnl    Copyright (C) 1999 Tony Finch <dot@dotat.at>
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
@@ -78,6 +78,7 @@ static void Tensureinputfile(void) {
     fd= atoi(fdstr);
     Tinputfile= fdopen(fd,"r"); if (!Tinputfile) Tfailed("fdopen ADNS_TEST_IN_FD");
   }
+  setvbuf(Tinputfile,0,_IONBF,0);
 
   if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
   fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();

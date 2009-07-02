@@ -71,19 +71,22 @@
  close fd=5
  close=OK
  +0.000146
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000001
  socket type=SOCK_STREAM
  socket=5
  +0.000678
  fcntl fd=5 cmd=F_GETFL
  fcntl=~O_NONBLOCK&...
- +0.000042
+ +0.000041
  fcntl fd=5 cmd=F_SETFL O_NONBLOCK|...
  fcntl=OK
  +0.000039
  connect fd=5 addr=172.18.45.6:53
  connect=EINPROGRESS
  +0.000455
- select max=6 rfds=[4] wfds=[5] efds=[] to=14.000000
+ select max=6 rfds=[4] wfds=[5] efds=[] to=13.998787
  select=1 rfds=[] wfds=[5] efds=[]
  +0.000135
  read fd=5 buflen=1

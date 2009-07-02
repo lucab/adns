@@ -6,10 +6,10 @@
  */
 /*
  *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -289,10 +289,10 @@ struct adns__state {
     server_ok, server_broken
   } tcpstate;
   struct timeval tcptimeout;
-  /* This will have tv_sec==0 if it is not valid.
-   * It will always be valid if tcpstate _connecting.
-   * When _ok, it will be nonzero if we are idle
-   * (ie, tcpw queue is empty) and counting down.
+  /* This will have tv_sec==0 if it is not valid.  It will always be
+   * valid if tcpstate _connecting.  When _ok, it will be nonzero if
+   * we are idle (ie, tcpw queue is empty), in which case it is the
+   * absolute time when we will close the connection.
    */
   struct sigaction stdsigpipe;
   sigset_t stdsigmask;

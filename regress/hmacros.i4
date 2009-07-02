@@ -6,7 +6,7 @@ m4_dnl  This file is
 m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
 m4_dnl
 m4_dnl  It is part of adns, which is
-m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 m4_dnl    Copyright (C) 1999 Tony Finch <dot@dotat.at>
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
