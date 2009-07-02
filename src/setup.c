@@ -41,7 +41,7 @@
 
 static void readconfig(adns_state ads, const char *filename, int warnmissing);
 
-static void addserver(adns_state ads, struct in_addr addr) {
+static void addserverv4(adns_state ads, struct in_addr addr) {
   int i;
   struct server *ss;
   
@@ -105,15 +105,26 @@ static int nextword(const char **bufp_io, const char **word_r, int *l_r) {
 
 static void ccf_nameserver(adns_state ads, const char *fn,
 			   int lno, const char *buf) {
-  struct in_addr ia;
+  struct in_addr ia4;
+  struct in6_addr ia6;
   
-  if (!inet_aton(buf,&ia)) {
-    configparseerr(ads,fn,lno,"invalid nameserver address `%s'",buf);
-    return;
+  if (!inet_aton(buf,&ia4)) {
+    if (!inet_pton(buf,&ia6)) {
+	configparseerr(ads,fn,lno,"invalid nameserver address `%s'",buf);
+	return;
+    }
+    else {
+	adns__debug(ads,-1,0,"using nameserver %s",inet_ntop(ia6));
+	addserverv6(ads,ia6);
+	
+    }
   }
-  adns__debug(ads,-1,0,"using nameserver %s",inet_ntoa(ia));
-  addserver(ads,ia);
+  else {
+    adns__debug(ads,-1,0,"using nameserver %s",inet_ntoa(ia4));
+    addserverv4(ads,ia4);
+  }
 }
+
 
 static void ccf_search(adns_state ads, const char *fn,
 		       int lno, const char *buf) {
@@ -550,7 +561,7 @@ static int init_finish(adns_state ads) {
     if (ads->logfn && ads->iflags & adns_if_debug)
       adns__lprintf(ads,"adns: no nameservers, using localhost\n");
     ia.s_addr= htonl(INADDR_LOOPBACK);
-    addserver(ads,ia);
+    addserverv4(ads,ia);
   }
 
   proto= getprotobyname("udp"); if (!proto) { r= ENOPROTOOPT; goto x_free; }
