@@ -46,7 +46,7 @@ static void addserverv4(adns_state ads, struct in_addr addr) {
   struct server *ss;
   
   for (i=0; i<ads->nservers; i++) {
-    if (ads->servers[i].addr.s_addr == addr.s_addr) {
+    if ((ads->servers[i].sin_family == AF_INET) && (ads->servers[i].addr.s_addr == addr.s_addr)) {
       adns__debug(ads,-1,0,"duplicate nameserver %s ignored",inet_ntoa(addr));
       return;
     }
@@ -58,6 +58,7 @@ static void addserverv4(adns_state ads, struct in_addr addr) {
   }
 
   ss= ads->servers+ads->nservers;
+  ss->sin_family= AF_INET;
   ss->addr= addr;
   ads->nservers++;
 }
