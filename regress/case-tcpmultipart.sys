@@ -22,7 +22,7 @@ tunnel
  connect fd=5 addr=172.31.80.9:53
  connect=EINPROGRESS
  +0.000414
- select max=6 rfds=[4] wfds=[5] efds=[] to=29.998324
+ select max=6 rfds=[4] wfds=[5] efds=[] to=13.998324
  select=1 rfds=[] wfds=[5] efds=[]
  +1.-647444
  read fd=5 buflen=1
@@ -43,7 +43,7 @@ tunnel
      2d616464 72046172 70610000 0c0001.
  write=47
  +0.000273
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.998465
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.644233
  select=1 rfds=[5] wfds=[] efds=[]
  +0.538651
  read fd=5 buflen=2
@@ -66,7 +66,7 @@ tunnel
  read fd=5 buflen=297
  read=EAGAIN
  +0.000476
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.457802
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.105246
  select=1 rfds=[5] wfds=[] efds=[]
  +1.-401146
  read fd=5 buflen=297
@@ -109,7 +109,7 @@ tunnel
  read fd=5 buflen=2572
  read=EAGAIN
  +0.000101
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.855360
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.502804
  select=1 rfds=[5] wfds=[] efds=[]
  +0.336462
  read fd=5 buflen=2572
@@ -148,7 +148,7 @@ tunnel
  read fd=5 buflen=1624
  read=EAGAIN
  +0.000124
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.515459
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.162903
  select=1 rfds=[5] wfds=[] efds=[]
  +1.-683589
  read fd=5 buflen=1624
@@ -187,7 +187,7 @@ tunnel
  read fd=5 buflen=676
  read=EAGAIN
  +0.000114
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.195733
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=27.843177
  select=1 rfds=[5] wfds=[] efds=[]
  +0.376863
  read fd=5 buflen=676
@@ -230,7 +230,7 @@ tunnel
  read fd=5 buflen=3248
  read=EAGAIN
  +0.000066
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=27.807002
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=27.454446
  select=1 rfds=[5] wfds=[] efds=[]
  +0.316770
  read fd=5 buflen=3248

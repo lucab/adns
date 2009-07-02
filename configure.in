@@ -31,6 +31,15 @@ AC_CHECK_FUNCS(poll)
 ADNS_C_GETFUNC(socket,socket)
 ADNS_C_GETFUNC(inet_ntoa,nsl)
 
+PROGS_IF_TSEARCH=adnsresfilter
+AC_SUBST(PROGS_HAVE_TSEARCH)
+AC_CHECK_FUNC(tsearch,[
+ PROGS_HAVE_TSEARCH=$PROGS_IF_TSEARCH
+],[
+ PROGS_HAVE_TSEARCH='';
+ AC_MSG_WARN([tsearch missing - not building client program(s) $PROGS_IF_TSEARCH])
+])
+
 AC_MSG_CHECKING(for INADDR_LOOPBACK)
 AC_CACHE_VAL(adns_cv_decl_inaddrloopback,[
  AC_TRY_COMPILE([
@@ -77,14 +86,14 @@ AC_SUBST(SHLIBFORLINK)
 AC_SUBST(SHLIBFILE)
 AC_SUBST(SHLIBSONAME)
 
-SHLIBCC='$(CC) $(CFLAGS) -fpic'
-MKSHLIB_1='$(CC) $(LDFLAGS) -shared -Wxl,soname=$(SONAME) -o'
-MKSHLIB_2=''
-MKSHLIB_3='-lc'
-
 SHLIBFORLINK='libadns.so'
 SHLIBSONAME='$(SHLIBFORLINK).$(MAJOR)'
 SHLIBFILE='$(SHLIBSONAME).$(MINOR)'
+
+SHLIBCC='$(CC) $(CFLAGS) -fpic'
+MKSHLIB_1='$(CC) $(LDFLAGS) -shared -Wl,-soname=$(SHLIBSONAME) -o'
+MKSHLIB_2=''
+MKSHLIB_3='-lc'
 
 AC_OUTPUT(
 	settings.make Makefile

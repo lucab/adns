@@ -43,6 +43,10 @@ int Hwrite(
 	);
 int Hwritev(int fd, const struct iovec *vector, size_t count);
 int Hgettimeofday(struct timeval *tv, struct timezone *tz);
+void *Hmalloc(size_t sz);
+void Hfree(void *ptr);
+void *Hrealloc(void *op, size_t nsz);
+void Hexit(int rv);
 /* There is a Q function (Q for Question) for each such syscall;
  * it constructs a string representing the call, and calls Q_str
  * on it, or constructs it in vb and calls Q_vb;
@@ -80,6 +84,7 @@ void Qwrite(
 	int fd , const void *buf , size_t len 
 	);
 void Q_vb(void);
+extern void Tshutdown(void);
 /* General help functions */
 void Tfailed(const char *why);
 void Toutputerr(void);

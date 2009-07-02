@@ -40,10 +40,15 @@ m4_include(hmacros.i4)
 static FILE *Tinputfile, *Treportfile;
 static vbuf vb2;
 
+extern void Tshutdown(void) {
+  adns__vbuf_free(&vb2);
+}
+
 static void Tensurereportfile(void) {
   const char *fdstr;
   int fd;
 
+  if (Treportfile) return;
   Treportfile= stderr;
   fdstr= getenv("ADNS_TEST_REPORT_FD"); if (!fdstr) return;
   fd= atoi(fdstr);
@@ -271,7 +276,7 @@ void Q_vb(void) {
 m4_define(`hm_syscall', `
  hm_create_proto_h
 int H$1(hm_args_massage($3,void)) {
- int r;
+ int r, amtread;
  m4_define(`hm_rv_fd',`char *ep;')
  m4_define(`hm_rv_any',`char *ep;')
  m4_define(`hm_rv_len',`')
@@ -295,10 +300,10 @@ int H$1(hm_args_massage($3,void)) {
 
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!=hm_squote\nhm_squote)
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!=hm_squote\nhm_squote)
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," $1=",hm_r_offset)) Psyntax("syscall reply mismatch");
 
  if (vb2.buf[hm_r_offset] == hm_squoteEhm_squote) {
@@ -346,7 +351,8 @@ int H$1(hm_args_massage($3,void)) {
  m4_define(`hm_arg_pollfds_io',`Parg("$'`1"); Ppollfds($'`1,$'`2);')
  m4_define(`hm_arg_addr_out',`Parg("$'`1"); Paddr($'`1,$'`2);')
  $3
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
 
  hm_create_nothing
  m4_define(`hm_arg_bytes_out',`r= Pbytes($'`2,$'`4);')

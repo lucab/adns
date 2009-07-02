@@ -51,7 +51,7 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  *
- *  $Id: adns.h,v 1.70 1999/10/13 01:23:56 ian Exp $
+ *  $Id: adns.h,v 1.73 1999/11/07 19:15:36 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
@@ -78,6 +78,7 @@ typedef enum {
   adns_if_noerrprint=   0x0002, /* never print output to stderr (_debug overrides) */
   adns_if_noserverwarn= 0x0004, /* do not warn to stderr about duff nameservers etc */
   adns_if_debug=        0x0008, /* enable all output to stderr plus debug msgs */
+  adns_if_logpid=       0x0080, /* include pid in diagnostic output */
   adns_if_noautosys=    0x0010, /* do not make syscalls at every opportunity */
   adns_if_eintr=        0x0020, /* allow _wait and _synchronous to return EINTR */
   adns_if_nosigpipe=    0x0040, /* applic has SIGPIPE set to SIG_IGN, do not protect */
@@ -336,20 +337,21 @@ typedef struct {
  *  requested.
  */
 
-int adns_init(adns_state *newstate_r, int flags /*adns_initflags*/,
+int adns_init(adns_state *newstate_r, adns_initflags flags,
 	      FILE *diagfile /*0=>stderr*/);
 
-int adns_init_strcfg(adns_state *newstate_r, int flags /*adns_initflags*/,
+int adns_init_strcfg(adns_state *newstate_r, adns_initflags flags,
 		     FILE *diagfile /*0=>discard*/, const char *configtext);
 
 /* Configuration:
  *  adns_init reads /etc/resolv.conf, which is expected to be (broadly
- *  speaking) in the format expected by libresolv.  adns_init_strcfg
- *  is instead passed a string which is interpreted as if it were the
- *  contents of resolv.conf.  In general, configuration which is set
- *  later overrides any that is set earlier.
+ *  speaking) in the format expected by libresolv, and then
+ *  /etc/resolv-adns.conf if it exists.  adns_init_strcfg is instead
+ *  passed a string which is interpreted as if it were the contents of
+ *  resolv.conf or resolv-adns.conf.  In general, configuration which
+ *  is set later overrides any that is set earlier.
  *
- * Standard directives understood in resolv.conf:
+ * Standard directives understood in resolv[-adns].conf:
  * 
  *  nameserver <address>
  *   Must be followed by the IP address of a nameserver.  Several
@@ -382,7 +384,7 @@ int adns_init_strcfg(adns_state *newstate_r, int flags /*adns_initflags*/,
  *   Each option consists of an option name, followed by optionally
  *   a colon and a value.  Options are listed below.
  *
- * Non-standard directives understood in resolv.conf:
+ * Non-standard directives understood in resolv[-adns].conf:
  *
  *  clearnameservers
  *   Clears the list of nameservers, so that further nameserver lines
@@ -391,7 +393,8 @@ int adns_init_strcfg(adns_state *newstate_r, int flags /*adns_initflags*/,
  *  include <filename>
  *   The specified file will be read.
  *
- * Additionally, adns will ignore lines in resolv.conf which start with a #.
+ * Additionally, adns will ignore lines in resolv[-adns].conf which
+ * start with a #.
  *
  * Standard options understood:
  *
@@ -420,7 +423,7 @@ int adns_init_strcfg(adns_state *newstate_r, int flags /*adns_initflags*/,
  * each case there is both a FOO and an ADNS_FOO; the latter is
  * interpreted later so that it can override the former.  Unless
  * otherwise stated, environment variables are interpreted after
- * resolv.conf is read, in the order they are listed here.
+ * resolv[-adns].conf are read, in the order they are listed here.
  *
  *  RES_CONF, ADNS_RES_CONF
  *   A filename, whose contets are in the format of resolv.conf.
@@ -443,7 +446,7 @@ int adns_init_strcfg(adns_state *newstate_r, int flags /*adns_initflags*/,
 int adns_synchronous(adns_state ads,
 		     const char *owner,
 		     adns_rrtype type,
-		     int flags /*adns_queryflags*/,
+		     adns_queryflags flags,
 		     adns_answer **answer_r);
 
 /* NB: if you set adns_if_noautosys then _submit and _check do not
@@ -454,7 +457,7 @@ int adns_synchronous(adns_state ads,
 int adns_submit(adns_state ads,
 		const char *owner,
 		adns_rrtype type,
-		int flags /*adns_queryflags*/,
+		adns_queryflags flags,
 		void *context,
 		adns_query *query_r);
 
@@ -493,7 +496,7 @@ void adns_cancel(adns_query query);
 int adns_submit_reverse(adns_state ads,
 			const struct sockaddr *addr,
 			adns_rrtype type,
-			int flags /*adns_queryflags*/,
+			adns_queryflags flags,
 			void *context,
 			adns_query *query_r);
 /* type must be _r_ptr or _r_ptr_raw.  _qf_search is ignored.

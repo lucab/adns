@@ -45,6 +45,9 @@ void ensure_adns_init(void) {
 	       ov_verbose,
 	       0);
   if (r) sysfail("adns_init",r);
+
+  if (ov_format == fmt_default)
+    ov_format= ov_asynch ? fmt_asynch : fmt_simple;
 }
 
 static void prep_query(struct query_node **qun_r, int *quflags_r) {
@@ -67,7 +70,7 @@ static void prep_query(struct query_node **qun_r, int *quflags_r) {
   *quflags_r=
     (ov_search ? adns_qf_search : 0) |
     (ov_tcp ? adns_qf_usevc : 0) |
-    (ov_pqfr.show_owner ? adns_qf_owner : 0) |
+    ((ov_pqfr.show_owner || ov_format == fmt_simple) ? adns_qf_owner : 0) |
     (ov_qc_query ? adns_qf_quoteok_query : 0) |
     (ov_qc_anshost ? adns_qf_quoteok_anshost : 0) |
     (ov_qc_cname ? 0 : adns_qf_quoteok_cname) |
@@ -147,7 +150,7 @@ static void print_owner_ttl(struct query_node *qun, adns_answer *answer) {
   print_ttl(qun,answer);
 }
 
-static void print_status(adns_status st, struct query_node *qun, adns_answer *answer) {
+static void check_status(adns_status st) {
   static const adns_status statuspoints[]= {
     adns_s_ok,
     adns_s_max_localfail, adns_s_max_remotefail, adns_s_max_tempfail,
@@ -155,16 +158,19 @@ static void print_status(adns_status st, struct query_node *qun, adns_answer *an
   };
 
   const adns_status *spp;
-  const char *statustypeabbrev, *statusabbrev, *statusstring;
   int minrcode;
 
-  statustypeabbrev= adns_errtypeabbrev(st);
   for (minrcode=0, spp=statuspoints;
        spp < statuspoints + (sizeof(statuspoints)/sizeof(statuspoints[0]));
        spp++)
     if (st > *spp) minrcode++;
   if (rcode < minrcode) rcode= minrcode;
+}
 
+static void print_status(adns_status st, struct query_node *qun, adns_answer *answer) {
+  const char *statustypeabbrev, *statusabbrev, *statusstring;
+
+  statustypeabbrev= adns_errtypeabbrev(st);
   statusabbrev= adns_errabbrev(st);
   statusstring= adns_strerror(st);
   assert(!strchr(statusstring,'"'));
@@ -177,6 +183,32 @@ static void print_status(adns_status st, struct query_node *qun, adns_answer *an
   if (printf("\"%s\"\n", statusstring) == EOF) outerr();
 }
 
+static void print_dnsfail(adns_status st, struct query_node *qun, adns_answer *answer) {
+  int r;
+  const char *typename, *statusstring;
+  adns_status ist;
+  
+  if (ov_format == fmt_inline) {
+    if (fputs("; failed ",stdout) == EOF) outerr();
+    print_status(st,qun,answer);
+    return;
+  }
+  assert(ov_format == fmt_simple);
+  if (st == adns_s_nxdomain) {
+    r= fprintf(stderr,"%s does not exist\n", answer->owner);
+  } else {
+    ist= adns_rr_info(answer->type, &typename, 0,0,0,0);
+    if (st == adns_s_nodata) {
+      r= fprintf(stderr,"%s has no %s record\n", answer->owner, typename);
+    } else {
+      statusstring= adns_strerror(st);
+      r= fprintf(stderr,"Error during DNS %s lookup for %s: %s\n",
+		 typename, answer->owner, statusstring);
+    }
+  }
+  if (r == EOF) sysfail("write error message to stderr",errno);
+}
+    
 void query_done(struct query_node *qun, adns_answer *answer) {
   adns_status st, ist;
   int rrn, nrrs;
@@ -185,20 +217,23 @@ void query_done(struct query_node *qun, adns_answer *answer) {
 
   st= answer->status;
   nrrs= answer->nrrs;
-  if (ov_asynch) {
+  if (ov_format == fmt_asynch) {
+    check_status(st);
     if (printf("%s %d ", qun->id, nrrs) == EOF) outerr();
     print_status(st,qun,answer);
   } else {
-    if (st) {
-      if (fputs("; failed ",stdout) == EOF) outerr();
-      print_status(st,qun,answer);
-    } else if (qun->pqfr.show_cname && answer->cname) {
+    if (qun->pqfr.show_cname && answer->cname) {
       print_owner_ttl(qun,answer);
-      if (printf("CNAME %s\n",answer->cname) == EOF) outerr();
+      if (qun->pqfr.show_type) print_withspace("CNAME");
+      if (printf("%s\n", answer->cname) == EOF) outerr();
+    }
+    if (st) {
+      check_status(st);
+      print_dnsfail(st,qun,answer);
     }
   }
   if (qun->pqfr.show_owner) {
-    realowner= answer->cname ? answer->cname : answer->owner;;
+    realowner= answer->cname ? answer->cname : answer->owner;
     assert(realowner);
   } else {
     realowner= 0;

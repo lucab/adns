@@ -28,6 +28,7 @@
 #ifndef ADNSHOST_H_INCLUDED
 #define ADNSHOST_H_INCLUDED
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -36,6 +37,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -62,6 +64,7 @@ struct optioninfo {
 };
 
 enum ttlmode { tm_none, tm_rel, tm_abs };
+enum outputformat { fmt_default, fmt_simple, fmt_inline, fmt_asynch };
 
 struct perqueryflags_remember {
   int show_owner, show_type, show_cname;
@@ -72,7 +75,7 @@ extern int ov_env, ov_pipe, ov_asynch;
 extern int ov_verbose;
 extern adns_rrtype ov_type;
 extern int ov_search, ov_qc_query, ov_qc_anshost, ov_qc_cname;
-extern int ov_tcp, ov_cname;
+extern int ov_tcp, ov_cname, ov_format;
 extern char *ov_id;
 extern struct perqueryflags_remember ov_pqfr;
 

@@ -39,40 +39,29 @@
 #include <arpa/inet.h>
 
 #include "internal.h"
+#include "tvarith.h"
 
 /* TCP connection management. */
 
-void adns__tcp_closenext(adns_state ads) {
+static void tcp_close(adns_state ads) {
   int serv;
   
   serv= ads->tcpserver;
   close(ads->tcpsocket);
   ads->tcpsocket= -1;
-  ads->tcpstate= server_disconnected;
   ads->tcprecv.used= ads->tcprecv_skip= ads->tcpsend.used= 0;
-  ads->tcpserver= (serv+1)%ads->nservers;
 }
 
 void adns__tcp_broken(adns_state ads, const char *what, const char *why) {
   int serv;
-  adns_query qu, nqu;
   
   assert(ads->tcpstate == server_connecting || ads->tcpstate == server_ok);
   serv= ads->tcpserver;
-  adns__warn(ads,serv,0,"TCP connection lost: %s: %s",what,why);
-  adns__tcp_closenext(ads);
-  
-  for (qu= ads->timew.head; qu; qu= nqu) {
-    nqu= qu->next;
-    if (qu->state == query_tosend) continue;
-    assert(qu->state == query_tcpwait || qu->state == query_tcpsent);
-    qu->state= query_tcpwait;
-    qu->tcpfailed |= (1<<serv);
-    if (qu->tcpfailed == (1<<ads->nservers)-1) {
-      LIST_UNLINK(ads->timew,qu);
-      adns__query_fail(qu,adns_s_allservfail);
-    }
-  }
+  if (what) adns__warn(ads,serv,0,"TCP connection failed: %s: %s",what,why);
+
+  tcp_close(ads);
+  ads->tcpstate= server_broken;
+  ads->tcpserver= (serv+1)%ads->nservers;
 }
 
 static void tcp_connected(adns_state ads, struct timeval now) {
@@ -80,11 +69,10 @@ static void tcp_connected(adns_state ads, struct timeval now) {
   
   adns__debug(ads,ads->tcpserver,0,"TCP connected");
   ads->tcpstate= server_ok;
-  for (qu= ads->timew.head; qu; qu= nqu) {
+  for (qu= ads->tcpw.head; qu && ads->tcpstate == server_ok; qu= nqu) {
     nqu= qu->next;
-    if (qu->state == query_tosend) continue;
-    assert (qu->state == query_tcpwait);
-    adns__query_tcp(qu,now);
+    assert(qu->state == query_tcpw);
+    adns__querysend_tcp(qu,now);
   }
 }
 
@@ -94,8 +82,17 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
   struct protoent *proto;
 
   for (tries=0; tries<ads->nservers; tries++) {
-    if (ads->tcpstate == server_connecting || ads->tcpstate == server_ok) return;
-    assert(ads->tcpstate == server_disconnected);
+    switch (ads->tcpstate) {
+    case server_connecting:
+    case server_ok:
+    case server_broken:
+      return;
+    case server_disconnected:
+      break;
+    default:
+      abort();
+    }
+    
     assert(!ads->tcpsend.used);
     assert(!ads->tcprecv.used);
     assert(!ads->tcprecv_skip);
@@ -120,9 +117,14 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
     r= connect(fd,(const struct sockaddr*)&addr,sizeof(addr));
     ads->tcpsocket= fd;
     ads->tcpstate= server_connecting;
-    if (r==0) { tcp_connected(ads,now); continue; }
-    if (errno == EWOULDBLOCK || errno == EINPROGRESS) return;
+    if (r==0) { tcp_connected(ads,now); return; }
+    if (errno == EWOULDBLOCK || errno == EINPROGRESS) {
+      ads->tcptimeout= now;
+      timevaladd(&ads->tcptimeout,TCPCONNMS);
+      return;
+    }
     adns__tcp_broken(ads,"connect",strerror(errno));
+    ads->tcpstate= server_disconnected;
   }
 }
 
@@ -158,6 +160,7 @@ static void inter_maxto(struct timeval **tv_io, struct timeval *tvbuf,
 
 static void inter_maxtoabs(struct timeval **tv_io, struct timeval *tvbuf,
 			   struct timeval now, struct timeval maxtime) {
+  /* tv_io may be 0 */
   ldiv_t dr;
 
 /*fprintf(stderr,"inter_maxtoabs now=%ld.%06ld maxtime=%ld.%06ld\n",
@@ -172,28 +175,93 @@ static void inter_maxtoabs(struct timeval **tv_io, struct timeval *tvbuf,
   inter_maxto(tv_io,tvbuf,maxtime);
 }
 
-void adns__timeouts(adns_state ads, int act,
-		    struct timeval **tv_io, struct timeval *tvbuf,
-		    struct timeval now) {
+static void timeouts_queue(adns_state ads, int act,
+			   struct timeval **tv_io, struct timeval *tvbuf,
+			   struct timeval now, struct query_queue *queue) {
   adns_query qu, nqu;
-
-  for (qu= ads->timew.head; qu; qu= nqu) {
+  
+  for (qu= queue->head; qu; qu= nqu) {
     nqu= qu->next;
     if (!timercmp(&now,&qu->timeout,>)) {
-      if (!tv_io) continue;
       inter_maxtoabs(tv_io,tvbuf,now,qu->timeout);
     } else {
-      if (!act) continue;
-      LIST_UNLINK(ads->timew,qu);
+      if (!act) {
+	tvbuf->tv_sec= 0;
+	tvbuf->tv_usec= 0;
+	*tv_io= tvbuf;
+	return;
+      }
+      LIST_UNLINK(*queue,qu);
       if (qu->state != query_tosend) {
 	adns__query_fail(qu,adns_s_timeout);
       } else {
 	adns__query_send(qu,now);
       }
-      nqu= ads->timew.head;
+      nqu= queue->head;
     }
   }
-}  
+}
+
+static void tcp_events(adns_state ads, int act,
+		       struct timeval **tv_io, struct timeval *tvbuf,
+		       struct timeval now) {
+  adns_query qu, nqu;
+  
+  for (;;) {
+    switch (ads->tcpstate) {
+    case server_broken:
+      for (qu= ads->tcpw.head; qu; qu= nqu) {
+	nqu= qu->next;
+	assert(qu->state == query_tcpw);
+	if (qu->retries > ads->nservers) {
+	  LIST_UNLINK(ads->tcpw,qu);
+	  adns__query_fail(qu,adns_s_allservfail);
+	}
+      }
+      ads->tcpstate= server_disconnected;
+    case server_disconnected: /* fall through */
+      if (!ads->tcpw.head) return;
+      adns__tcp_tryconnect(ads,now);
+      break;
+    case server_ok:
+      if (ads->tcpw.head) return;
+      if (!ads->tcptimeout.tv_sec) {
+	assert(!ads->tcptimeout.tv_usec);
+	ads->tcptimeout= now;
+	timevaladd(&ads->tcptimeout,TCPIDLEMS);
+      }
+    case server_connecting: /* fall through */
+      if (!timercmp(&now,&ads->tcptimeout,>)) {
+	inter_maxtoabs(tv_io,tvbuf,now,ads->tcptimeout);
+	return;
+      } {
+	/* TCP timeout has happened */
+	switch (ads->tcpstate) {
+	case server_connecting: /* failed to connect */
+	  adns__tcp_broken(ads,"unable to make connection","timed out");
+	  break;
+	case server_ok: /* idle timeout */
+	  tcp_close(ads);
+	  ads->tcpstate= server_disconnected;
+	  return;
+	default:
+	  abort();
+	}
+      }
+      break;
+    default:
+      abort();
+    }
+  }
+}
+
+void adns__timeouts(adns_state ads, int act,
+		    struct timeval **tv_io, struct timeval *tvbuf,
+		    struct timeval now) {
+  timeouts_queue(ads,act,tv_io,tvbuf,now, &ads->udpw);
+  timeouts_queue(ads,act,tv_io,tvbuf,now, &ads->tcpw);
+  tcp_events(ads,act,tv_io,tvbuf,now);
+}
 
 void adns_firsttimeout(adns_state ads,
 		       struct timeval **tv_io, struct timeval *tvbuf,
@@ -509,14 +577,13 @@ xit:
 void adns_globalsystemfailure(adns_state ads) {
   adns__consistency(ads,0,cc_entex);
 
-  while (ads->timew.head) {
-    adns__query_fail(ads->timew.head, adns_s_systemfail);
-  }
+  while (ads->udpw.head) adns__query_fail(ads->udpw.head, adns_s_systemfail);
+  while (ads->tcpw.head) adns__query_fail(ads->tcpw.head, adns_s_systemfail);
   
   switch (ads->tcpstate) {
   case server_connecting:
   case server_ok:
-    adns__tcp_closenext(ads);
+    adns__tcp_broken(ads,0,0);
     break;
   case server_disconnected:
     break;
@@ -567,7 +634,7 @@ int adns__internal_check(adns_state ads,
   if (!qu) {
     if (ads->output.head) {
       qu= ads->output.head;
-    } else if (ads->timew.head) {
+    } else if (ads->udpw.head || ads->tcpw.head) {
       return EAGAIN;
     } else {
       return ESRCH;

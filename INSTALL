@@ -18,6 +18,14 @@ libtool.  I'm not interested in supporting non-ELF shared libraries.
 However, if you send me an appropriate patch I'd be willing to make it
 easy or automatic to disable the ELF shared library arrangements.
 
+The adnsresfilter utility uses `tsearch' from the C library (a la SVID
+and X/Open).  If your C library doesn't have tsearch you will find
+that configure arranges for adnsresfilter not to be built.  To rectify
+this, install a C library containing tsearch, such as the GNU C
+library.  It is best if tsearch uses an automatically-balancing tree
+algorithm, like the glibc version does.  Simple binary trees may
+perform badly.
+
 You will probably find that GNU Make is required.
 
 
@@ -44,3 +52,7 @@ You should have received a copy of the GNU General Public License
 along with userv as the file COPYING; if not, email me at the address
 above or write to the Free Software Foundation, 59 Temple Place -
 Suite 330, Boston, MA 02111-1307, USA.
+
+# Local variables:
+# mode: text
+# End:

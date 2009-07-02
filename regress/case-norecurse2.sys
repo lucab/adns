@@ -523,7 +523,7 @@ default -0x16
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
  +0.000201
- select max=6 rfds=[4] wfds=[5] efds=[] to=29.987312
+ select max=6 rfds=[4] wfds=[5] efds=[] to=13.987312
  select=1 rfds=[] wfds=[5] efds=[]
  +0.000364
  read fd=5 buflen=1
@@ -539,7 +539,7 @@ default -0x16
      64647204 61727061 00000c00 01.
  write=45
  +0.001275
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.996906
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.983854
  select=1 rfds=[5] wfds=[] efds=[]
  +0.000150
  read fd=5 buflen=2

@@ -41,11 +41,30 @@
 # define OUTPUTSTREAM stdout
 #endif
 
+struct myctx {
+  adns_query qu;
+  int doneyet, found;
+  const char *fdom;
+};
+  
+static struct myctx *mcs;
+static adns_state ads;
+static adns_rrtype *types_a;
+
+static void quitnow(int rc) NONRETURNING;
+static void quitnow(int rc) {
+  free(mcs);
+  free(types_a);
+  if (ads) adns_finish(ads);
+  
+  exit(rc);
+}
+
 #ifndef HAVE_POLL
 #undef poll
 int poll(struct pollfd *ufds, int nfds, int timeout) {
   fputs("poll(2) not supported on this system\n",stderr);
-  exit(5);
+  quitnow(5);
 }
 #define adns_beforepoll(a,b,c,d,e) 0
 #define adns_afterpoll(a,b,c,d) 0
@@ -54,13 +73,13 @@ int poll(struct pollfd *ufds, int nfds, int timeout) {
 static void failure_status(const char *what, adns_status st) NONRETURNING;
 static void failure_status(const char *what, adns_status st) {
   fprintf(stderr,"adns failure: %s: %s\n",what,adns_strerror(st));
-  exit(2);
+  quitnow(2);
 }
 
 static void failure_errno(const char *what, int errnoval) NONRETURNING;
 static void failure_errno(const char *what, int errnoval) {
   fprintf(stderr,"adns failure: %s: errno=%d\n",what,errnoval);
-  exit(2);
+  quitnow(2);
 }
 
 static void usageerr(const char *why) NONRETURNING;
@@ -80,7 +99,7 @@ static void usageerr(const char *why) {
 	  "              4 usage error\n"
 	  "              5 operation not supported on this system\n",
 	  why);
-  exit(4);
+  quitnow(4);
 }
 
 static const adns_rrtype defaulttypes[]= {
@@ -120,7 +139,7 @@ static void fdom_split(const char *fdom, const char **dom_r, int *qf_r,
   if (*ep == ',' && strchr(ep,'/')) {
     ep++;
     while (*ep != '/') {
-      if (--ownflags_l <= 0) { fputs("too many flags\n",stderr); exit(3); }
+      if (--ownflags_l <= 0) { fputs("too many flags\n",stderr); quitnow(3); }
       *ownflags++= *ep++;
     }
   }
@@ -134,15 +153,8 @@ static int consistsof(const char *string, const char *accept) {
 }
 
 int main(int argc, char *const *argv) {
-  struct myctx {
-    adns_query qu;
-    int doneyet, found;
-    const char *fdom;
-  };
-  
-  adns_state ads;
   adns_query qu;
-  struct myctx *mcs, *mc, *mcw;
+  struct myctx *mc, *mcw;
   void *mcr;
   adns_answer *ans;
   const char *initstring, *rrtn, *fmtn;
@@ -153,7 +165,6 @@ int main(int argc, char *const *argv) {
   int r;
   const adns_rrtype *types;
   struct timeval now;
-  adns_rrtype *types_a;
   char ownflags[10];
   char *ep;
   const char *initflags, *owninitflags;
@@ -185,7 +196,7 @@ int main(int argc, char *const *argv) {
     for (cp= argv[1]+1, tc=1; (ch= *cp); cp++)
       if (ch==',') tc++;
     types_a= malloc(sizeof(*types_a)*(tc+1));
-    if (!types_a) { perror("malloc types"); exit(3); }
+    if (!types_a) { perror("malloc types"); quitnow(3); }
     for (cp= argv[1]+1, ti=0; ti<tc; ti++) {
       types_a[ti]= strtoul(cp,&cp,10);
       if ((ch= *cp)) {
@@ -193,10 +204,11 @@ int main(int argc, char *const *argv) {
 	cp++;
       }
     }
-    *cp++= adns_r_none;
+    types_a[ti]= adns_r_none;
     types= types_a;
     argv++;
   } else {
+    types_a= 0;
     types= defaulttypes;
   }
   
@@ -205,8 +217,8 @@ int main(int argc, char *const *argv) {
 
   for (qc=0; fdomlist[qc]; qc++);
   for (tc=0; types[tc] != adns_r_none; tc++);
-  mcs= malloc(sizeof(*mcs)*qc*tc);
-  if (!mcs) { perror("malloc mcs"); exit(3); }
+  mcs= malloc(tc ? sizeof(*mcs)*qc*tc : 1);
+  if (!mcs) { perror("malloc mcs"); quitnow(3); }
 
   if (initstring) {
     r= adns_init_strcfg(&ads,
@@ -293,7 +305,7 @@ int main(int argc, char *const *argv) {
     
     fdom_split(mc->fdom,&domain,&qflags,ownflags,sizeof(ownflags));
 
-    if (gettimeofday(&now,0)) { perror("gettimeofday"); exit(3); }
+    if (gettimeofday(&now,0)) { perror("gettimeofday"); quitnow(3); }
       
     ri= adns_rr_info(ans->type, &rrtn,&fmtn,&len, 0,0);
     fprintf(stdout, "%s flags %d type ",domain,qflags);
@@ -321,8 +333,5 @@ int main(int argc, char *const *argv) {
     mc->doneyet= 1;
   }
 
-  free(mcs);
-  adns_finish(ads);
-  
-  exit(0);
+  quitnow(0);
 }

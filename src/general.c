@@ -27,6 +27,7 @@
  */
 
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,7 +47,11 @@ void adns__vdiag(adns_state ads, const char *pfx, adns_initflags prevent,
       (!(ads->iflags & adns_if_debug) && (!prevent || (ads->iflags & prevent))))
     return;
 
-  fprintf(ads->diagfile,"adns%s: ",pfx);
+  if (ads->iflags & adns_if_logpid) {
+    fprintf(ads->diagfile,"adns%s [%ld]: ",pfx,(long)getpid());
+  } else {
+    fprintf(ads->diagfile,"adns%s: ",pfx);
+  }
 
   vfprintf(ads->diagfile,fmt,al);
 
@@ -63,6 +68,7 @@ void adns__vdiag(adns_state ads, const char *pfx, adns_initflags prevent,
     if (qu->typei && qu->typei->fmtname)
       fprintf(ads->diagfile,"(%s)",qu->typei->fmtname);
     bef=", "; aft=")\n";
+    adns__vbuf_free(&vb);
   }
   
   if (serv>=0) {

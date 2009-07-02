@@ -1040,14 +1040,71 @@ fi
 
 
 
+PROGS_IF_TSEARCH=adnsresfilter
+
+echo $ac_n "checking for tsearch""... $ac_c" 1>&6
+echo "configure:1047: checking for tsearch" >&5
+if eval "test \"`echo '$''{'ac_cv_func_tsearch'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 1052 "configure"
+#include "confdefs.h"
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char tsearch(); below.  */
+#include <assert.h>
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char tsearch();
+
+int main() {
+
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_tsearch) || defined (__stub___tsearch)
+choke me
+#else
+tsearch();
+#endif
+
+; return 0; }
+EOF
+if { (eval echo configure:1075: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
+  rm -rf conftest*
+  eval "ac_cv_func_tsearch=yes"
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -rf conftest*
+  eval "ac_cv_func_tsearch=no"
+fi
+rm -f conftest*
+fi
+
+if eval "test \"`echo '$ac_cv_func_'tsearch`\" = yes"; then
+  echo "$ac_t""yes" 1>&6
+  
+ PROGS_HAVE_TSEARCH=$PROGS_IF_TSEARCH
+
+else
+  echo "$ac_t""no" 1>&6
+
+ PROGS_HAVE_TSEARCH='';
+ echo "configure: warning: tsearch missing - not building client program(s) $PROGS_IF_TSEARCH" 1>&2
+
+fi
+
+
 echo $ac_n "checking for INADDR_LOOPBACK""... $ac_c" 1>&6
-echo "configure:1045: checking for INADDR_LOOPBACK" >&5
+echo "configure:1102: checking for INADDR_LOOPBACK" >&5
 if eval "test \"`echo '$''{'adns_cv_decl_inaddrloopback'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
  cat > conftest.$ac_ext <<EOF
-#line 1051 "configure"
+#line 1108 "configure"
 #include "confdefs.h"
 
 #include <sys/socket.h>
@@ -1060,7 +1117,7 @@ int main() {
  
 ; return 0; }
 EOF
-if { (eval echo configure:1064: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1121: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_decl_inaddrloopback=yes
 else
@@ -1078,17 +1135,17 @@ else
  echo "$ac_t""not in standard headers, urgh..." 1>&6
  ac_safe=`echo "rpc/types.h" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for rpc/types.h""... $ac_c" 1>&6
-echo "configure:1082: checking for rpc/types.h" >&5
+echo "configure:1139: checking for rpc/types.h" >&5
 if eval "test \"`echo '$''{'ac_cv_header_$ac_safe'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1087 "configure"
+#line 1144 "configure"
 #include "confdefs.h"
 #include <rpc/types.h>
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:1092: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:1149: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out`
 if test -z "$ac_err"; then
   rm -rf conftest*
@@ -1121,12 +1178,12 @@ fi
 
 
  echo $ac_n "checking for inet_aton""... $ac_c" 1>&6
-echo "configure:1125: checking for inet_aton" >&5
+echo "configure:1182: checking for inet_aton" >&5
 if eval "test \"`echo '$''{'ac_cv_func_inet_aton'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1130 "configure"
+#line 1187 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char inet_aton(); below.  */
@@ -1149,7 +1206,7 @@ inet_aton();
 
 ; return 0; }
 EOF
-if { (eval echo configure:1153: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
+if { (eval echo configure:1210: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
   rm -rf conftest*
   eval "ac_cv_func_inet_aton=yes"
 else
@@ -1168,7 +1225,7 @@ else
   echo "$ac_t""no" 1>&6
 
   echo $ac_n "checking for inet_aton in -lresolv""... $ac_c" 1>&6
-echo "configure:1172: checking for inet_aton in -lresolv" >&5
+echo "configure:1229: checking for inet_aton in -lresolv" >&5
 ac_lib_var=`echo resolv'_'inet_aton | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -1176,7 +1233,7 @@ else
   ac_save_LIBS="$LIBS"
 LIBS="-lresolv  $LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 1180 "configure"
+#line 1237 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -1187,7 +1244,7 @@ int main() {
 inet_aton()
 ; return 0; }
 EOF
-if { (eval echo configure:1191: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
+if { (eval echo configure:1248: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
   rm -rf conftest*
   eval "ac_cv_lib_$ac_lib_var=yes"
 else
@@ -1221,20 +1278,20 @@ fi
 
  
  echo $ac_n "checking __attribute__((,,))""... $ac_c" 1>&6
-echo "configure:1225: checking __attribute__((,,))" >&5
+echo "configure:1282: checking __attribute__((,,))" >&5
  if eval "test \"`echo '$''{'adns_cv_c_attribute_supported'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1231 "configure"
+#line 1288 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(int x) __attribute__((,,))
 ; return 0; }
 EOF
-if { (eval echo configure:1238: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1295: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_c_attribute_supported=yes
 else
@@ -1256,20 +1313,20 @@ EOF
 
    
  echo $ac_n "checking __attribute__((noreturn))""... $ac_c" 1>&6
-echo "configure:1260: checking __attribute__((noreturn))" >&5
+echo "configure:1317: checking __attribute__((noreturn))" >&5
  if eval "test \"`echo '$''{'adns_cv_c_attribute_noreturn'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1266 "configure"
+#line 1323 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(int x) __attribute__((noreturn))
 ; return 0; }
 EOF
-if { (eval echo configure:1273: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1330: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_c_attribute_noreturn=yes
 else
@@ -1296,20 +1353,20 @@ EOF
 
    
  echo $ac_n "checking __attribute__((const))""... $ac_c" 1>&6
-echo "configure:1300: checking __attribute__((const))" >&5
+echo "configure:1357: checking __attribute__((const))" >&5
  if eval "test \"`echo '$''{'adns_cv_c_attribute_const'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1306 "configure"
+#line 1363 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(int x) __attribute__((const))
 ; return 0; }
 EOF
-if { (eval echo configure:1313: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1370: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_c_attribute_const=yes
 else
@@ -1336,20 +1393,20 @@ EOF
 
    
  echo $ac_n "checking __attribute__((format...))""... $ac_c" 1>&6
-echo "configure:1340: checking __attribute__((format...))" >&5
+echo "configure:1397: checking __attribute__((format...))" >&5
  if eval "test \"`echo '$''{'adns_cv_attribute_format'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1346 "configure"
+#line 1403 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(char *y, ...) __attribute__((format(printf,1,2)))
 ; return 0; }
 EOF
-if { (eval echo configure:1353: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1410: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_attribute_format=yes
 else
@@ -1398,14 +1455,14 @@ fi
 
 
 
-SHLIBCC='$(CC) $(CFLAGS) -fpic'
-MKSHLIB_1='$(CC) $(LDFLAGS) -shared -Wxl,soname=$(SONAME) -o'
-MKSHLIB_2=''
-MKSHLIB_3='-lc'
-
 SHLIBFORLINK='libadns.so'
 SHLIBSONAME='$(SHLIBFORLINK).$(MAJOR)'
 SHLIBFILE='$(SHLIBSONAME).$(MINOR)'
+
+SHLIBCC='$(CC) $(CFLAGS) -fpic'
+MKSHLIB_1='$(CC) $(LDFLAGS) -shared -Wl,-soname=$(SHLIBSONAME) -o'
+MKSHLIB_2=''
+MKSHLIB_3='-lc'
 
 trap '' 1 2 15
 cat > confcache <<\EOF
@@ -1542,6 +1599,7 @@ s%@mandir@%$mandir%g
 s%@CC@%$CC%g
 s%@CPP@%$CPP%g
 s%@RANLIB@%$RANLIB%g
+s%@PROGS_HAVE_TSEARCH@%$PROGS_HAVE_TSEARCH%g
 s%@WARNS@%$WARNS%g
 s%@SHLIBCC@%$SHLIBCC%g
 s%@MKSHLIB_1@%$MKSHLIB_1%g

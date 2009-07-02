@@ -316,7 +316,7 @@ manyptrwrong
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
  +0.000373
- select max=6 rfds=[4] wfds=[5] efds=[] to=29.539402
+ select max=6 rfds=[4] wfds=[5] efds=[] to=13.539402
  select=1 rfds=[] wfds=[5] efds=[]
  +0.008807
  read fd=5 buflen=1
@@ -332,7 +332,7 @@ manyptrwrong
      64647204 61727061 00000c00 01.
  write=45
  +0.000449
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.998444
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.529039
  select=1 rfds=[5] wfds=[] efds=[]
  +1.-90216
  read fd=5 buflen=2
@@ -391,7 +391,7 @@ manyptrwrong
  read fd=5 buflen=973
  read=EAGAIN
  +0.000255
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.078950
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.609545
  select=1 rfds=[5] wfds=[] efds=[]
  +1.-260444
  read fd=5 buflen=973
@@ -431,7 +431,7 @@ manyptrwrong
  read fd=5 buflen=2433
  read=EAGAIN
  +0.018754
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.314815
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=28.145272
  select=1 rfds=[5] wfds=[] efds=[]
  +0.355726
  read fd=5 buflen=2433
@@ -486,7 +486,7 @@ manyptrwrong
  read fd=5 buflen=973
  read=EAGAIN
  +0.000242
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=27.950237
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=27.780694
  select=1 rfds=[5] wfds=[] efds=[]
  +1.-129629
  read fd=5 buflen=973

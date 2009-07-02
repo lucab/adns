@@ -35,6 +35,7 @@ HCPPFLAGS:= $(foreach F,			\
 	gettimeofday select poll		\
 	socket fcntl connect close		\
 	sendto recvfrom read write writev	\
+	malloc realloc free exit		\
 , -D$F=H$F)
 
 HARNLOBJS=	$(addsuffix _d.o, $(basename $(LIBOBJS)))

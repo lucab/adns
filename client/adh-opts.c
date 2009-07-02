@@ -32,7 +32,7 @@ int ov_env=1, ov_pipe=0, ov_asynch=0;
 int ov_verbose= 0;
 adns_rrtype ov_type= adns_r_none;
 int ov_search=0, ov_qc_query=0, ov_qc_anshost=0, ov_qc_cname=1;
-int ov_tcp=0, ov_cname=0;
+int ov_tcp=0, ov_cname=0, ov_format=fmt_default;
 char *ov_id= 0;
 struct perqueryflags_remember ov_pqfr = { 1,1,1, tm_none };
 
@@ -44,6 +44,14 @@ static const struct optioninfo global_options[]= {
     "f", "pipe",           &ov_pipe, 1 },
   { ot_flag,             "Allow answers to be reordered",
     "a", "asynch",         &ov_asynch, 1 },
+  
+  { ot_desconly, "answer/error output format and destination (see below):" },
+  { ot_value,            "Answers to stdout, errors as messages to stderr (default)",
+    "Fs", "fmt-simple",    &ov_format, fmt_simple },
+  { ot_value,            "Answers and errors both to stdout in parseable format",
+    "Fi", "fmt-inline",    &ov_format, fmt_inline },
+  { ot_value,            "Fully-parseable output format (default for --asynch)",
+    "Fa", "fmt-asynch",    &ov_format, fmt_asynch },
   		         
   { ot_desconly, "global verbosity level:" },
   { ot_value,            "Do not print anything to stderr",
@@ -216,11 +224,12 @@ static void printusage(void) {
 	"or if the <owner> domain refers to a CNAME and --show-cname is on\n"
 	"   [<owner>] [<ttl>] CNAME <cname>\n"
 	"   [<cname>] [<ttl>] <type> <data>\n"
-	"When a query fails you get a line like this (broken here for readability):\n"
+	"When a query fails you get an error message to stderr (with --fmt-simple).\n"
+	"Specify --fmt-inline for lines like this (broken here for readability):\n"
 	"   ; failed <statustype> <statusnum> <statusabbrev> \\\n"
 	"       [<owner>] [<ttl>] [<cname>] \"<status string>\"\n"
-	"\n"
-	"If you use --asynch each answer (success or failure) is preceded by a line\n"
+	"If you use --fmt-asynch, which is the default for --asynch,\n"
+	"each answer (success or failure) is preceded by a line\n"
 	"   <id> <nrrs> <statustype> <statusnum> <statusabbrev> \\\n"
 	"       [<owner>] [<ttl>] [<cname>] \"<status string>\"\n"
 	"where <nrrs> is the number of RRs that follow and <cname> will be `$' or\n"
@@ -285,12 +294,14 @@ static const struct optioninfo *find(const char **optp,
 				     const char *prefix,
 				     comparer_type *comparer) {
   const struct optioninfo *oip;
+  const char *opt;
 
+  opt= *optp;
   oip= find1(optp,perquery_options,comparer);
   if (oip) return oip;
   oip= find1(optp,global_options,comparer);
-  if (!oip) usageerr("unknown option %s%s",prefix,*optp);
-  if (ads) usageerr("global option %s%s specified after query domain(s)",prefix,*optp);
+  if (!oip) usageerr("unknown option %s%s",prefix,opt);
+  if (ads) usageerr("global option %s%s specified after query domain(s)",prefix,opt);
   return oip;
 }
 

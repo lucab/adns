@@ -1,3 +1,34 @@
+adns (0.6) BETA; urgency=high
+
+  Core library bugfixes:
+  * Avoid infinite timeouts, causing lockup, when they should be zero !
+  * TCP handling revamped (avoids undefined behaviour due to reentrancy).
+  * Do not fail assertion if _qf_owner, _qf_search, domain ends in `.'.
+  * Many memory leaks fixed.
+
+  Cool new utility:
+  * adnsresfilter is like `cat' but converts addresses to names without
+    delaying the output.  Pipe `netstat -n', `tcpdump -ln', etc. into it.
+
+  Test and client program bug and portability fixes:
+  * Dynamic library building works properly.
+  * adnshost prints somewhat better messages about some wrong usages.
+  * Include <stdlib.h> and <sys/types.h> in adnshost.h.
+  * adnslogres: parsing and error checking improved (Tony Finch).
+  * Regression tests can cope with zero-length reads.
+  * Regression tests check for memory leaks.
+  * adnstest copes with empty query type list.
+  * adnstest uninitialised memory bug fixed.
+
+  General improvements
+  * Better control of adnshost output and error messages (new -F options).
+  * New adns_if_logpid option (functionality suggested by Tony Finch).
+  * New fanftest test program from Tony Finch (ignored by `make install').
+  * Reads /etc/resolv-adns.conf if it exists.
+  * Declare flags parameters as enums again, not ints.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed, 24 Nov 1999 17:13:03 +0000
+
 adns (0.5) unstable; urgency=high
 
   New features:

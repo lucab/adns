@@ -68,9 +68,9 @@ static adns_query query_alloc(adns_state ads, const typeinfo *typei,
 
   qu->id= 0;
   qu->flags= flags;
-  qu->udpretries= 0;
+  qu->retries= 0;
   qu->udpnextserver= 0;
-  qu->udpsent= qu->tcpfailed= 0;
+  qu->udpsent= 0;
   timerclear(&qu->timeout);
   qu->expires= now.tv_sec + MAXTTLBELIEVE;
 
@@ -91,7 +91,7 @@ static void query_submit(adns_state ads, adns_query qu,
 			 const typeinfo *typei, vbuf *qumsg_vb, int id,
 			 adns_queryflags flags, struct timeval now) {
   /* Fills in the query message in for a previously-allocated query,
-   * and submits it.  Cannot fail.
+   * and submits it.  Cannot fail.  Takes over the memory for qumsg_vb.
    */
 
   qu->vb= *qumsg_vb;
@@ -131,7 +131,7 @@ static void query_simple(adns_state ads, adns_query qu,
   int id;
   adns_status stat;
 
-  adns__vbuf_init(&vb);
+  vb= qu->vb;
   
   stat= adns__mkquery(ads,&vb,&id, owner,ol, typei,flags);
   if (stat) { adns__query_fail(qu,stat); return; }
@@ -195,7 +195,7 @@ static int save_owner(adns_query qu, const char *owner, int ol) {
 int adns_submit(adns_state ads,
 		const char *owner,
 		adns_rrtype type,
-		int flags,
+		adns_queryflags flags,
 		void *context,
 		adns_query *query_r) {
   int r, ol, ndots;
@@ -225,6 +225,7 @@ int adns_submit(adns_state ads,
 				 
   if (ol>=1 && owner[ol-1]=='.' && (ol<2 || owner[ol-2]!='\\')) {
     flags &= ~adns_qf_search;
+    qu->flags= flags;
     ol--;
   }
 
@@ -261,7 +262,7 @@ int adns_submit(adns_state ads,
 int adns_submit_reverse(adns_state ads,
 			const struct sockaddr *addr,
 			adns_rrtype type,
-			int flags,
+			adns_queryflags flags,
 			void *context,
 			adns_query *query_r) {
   const unsigned char *iaddr;
@@ -282,7 +283,7 @@ int adns_submit_reverse(adns_state ads,
 int adns_synchronous(adns_state ads,
 		     const char *owner,
 		     adns_rrtype type,
-		     int flags,
+		     adns_queryflags flags,
 		     adns_answer **answer_r) {
   adns_query qu;
   int r;
@@ -389,6 +390,8 @@ static void free_query_allocs(adns_query qu) {
   for (an= qu->allocations.head; an; an= ann) { ann= an->next; free(an); }
   LIST_INIT(qu->allocations);
   adns__vbuf_free(&qu->vb);
+  adns__vbuf_free(&qu->search_vb);
+  free(qu->query_dgram);
 }
 
 void adns_cancel(adns_query qu) {
@@ -398,10 +401,13 @@ void adns_cancel(adns_query qu) {
   adns__consistency(ads,qu,cc_entex);
   if (qu->parent) LIST_UNLINK_PART(qu->parent->children,qu,siblings.);
   switch (qu->state) {
-  case query_tosend: case query_tcpwait: case query_tcpsent:
-    LIST_UNLINK(ads->timew,qu);
+  case query_tosend:
+    LIST_UNLINK(ads->udpw,qu);
     break;
-  case query_child:
+  case query_tcpw:
+    LIST_UNLINK(ads->tcpw,qu);
+    break;
+  case query_childw:
     LIST_UNLINK(ads->childw,qu);
     break;
   case query_done:
@@ -496,6 +502,7 @@ void adns__query_done(adns_query qu) {
     LIST_UNLINK(qu->ads->childw,parent);
     qu->ctx.callback(parent,qu);
     free_query_allocs(qu);
+    free(qu->answer);
     free(qu);
   } else {
     makefinal_query(qu);

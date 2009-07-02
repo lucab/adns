@@ -24,17 +24,26 @@
 srcdir=		@srcdir@
 VPATH=		@srcdir@
 
-PROGRAMS=	adnstest adnslogres adnshost
+PROGS_SYSDEP=		@PROGS_HAVE_TSEARCH@
+
+PROGRAMS=	adnstest adnslogres adnshost $(PROGS_SYSDEP)
+PROGRAMS_LOCAL=	fanftest
+PROGRAMS_ALL=	$(PROGRAMS) $(PROGRAMS_LOCAL)
+
 TARG_INSTALL=	$(PROGRAMS)
-TARG_LOCAL=	$(addsuffix _s, $(PROGRAMS))
+TARG_LOCAL=	$(addsuffix _s, $(PROGRAMS_ALL))
 TARGETS=	$(TARG_LOCAL) $(TARG_INSTALL)
 include		$(srcdir)/../settings.make
 
 DIRCFLAGS=	-I$(srcdir)/../src
 
+TARG_OBJS=	$(addsuffix .o, $(PROGRAMS_ALL))
 ADH_OBJS=	adh-main.o adh-opts.o adh-query.o
+ALL_OBJS=	$(ADH_OBJS) $(TARG_OBJS)
 
-STATIC_LIB=	$(srcdir)/../src/libadns.a
+ADNSDIR=	$(srcdir)/../src/
+
+STATIC_LIB=	$(ADNSDIR)/libadns.a
 DYNAMIC_DEP=	$(srcdir)/../dynamic/$(SHLIBFILE)
 DYNAMIC_LINK=	-L$(srcdir)/../dynamic -ladns
 
@@ -47,16 +56,19 @@ install:	$(TARG_INSTALL)
 uninstall:
 		for f in $(TARGETS); do rm -f $(bin_dir)/$$f; done
 
-$(ADH_OBJS):	adnshost.h
-
 adnshost:	$(ADH_OBJS) $(DYNAMIC_DEP)
 		$(CC) $(LDFLAGS) $(ADH_OBJS) $(DYNAMIC_LINK) -o $@ $(LDLIBS)
 
 adnshost_s:	$(ADH_OBJS) $(STATIC_LIB)
 		$(CC) $(LDFLAGS) $(ADH_OBJS) $(STATIC_LIB) -o $@ $(LDLIBS)
 
+$(ADH_OBJS):		adnshost.h
+$(ALL_OBJS):		$(ADNSDIR)/adns.h $(ADNSDIR)/config.h
+adnsresfilter.o:	$(ADNSDIR)/tvarith.h
+
 %:		%.o $(DYNAMIC_DEP)
 		$(CC) $(LDFLAGS) $< $(DYNAMIC_LINK) -o $@ $(LDLIBS)
 
 %_s:		%.o $(STATIC_LIB)
 		$(CC) $(LDFLAGS) $< $(STATIC_LIB) -o $@ $(LDLIBS)
+

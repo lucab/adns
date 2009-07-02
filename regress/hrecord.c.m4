@@ -35,6 +35,9 @@ m4_include(hmacros.i4)
 
 static FILE *Toutputfile;
 
+void Tshutdown(void) {
+}
+
 static void R_recordtime(void) {
   int r;
   struct timeval tv, tvrel;

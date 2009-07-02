@@ -39,7 +39,7 @@
 
 #include "internal.h"
 
-static void readconfig(adns_state ads, const char *filename);
+static void readconfig(adns_state ads, const char *filename, int warnmissing);
 
 static void addserver(adns_state ads, struct in_addr addr) {
   int i;
@@ -60,6 +60,11 @@ static void addserver(adns_state ads, struct in_addr addr) {
   ss= ads->servers+ads->nservers;
   ss->addr= addr;
   ads->nservers++;
+}
+
+static void freesearchlist(adns_state ads) {
+  if (ads->nsearchlist) free(*ads->searchlist);
+  free(ads->searchlist);
 }
 
 static void saveerr(adns_state ads, int en) {
@@ -133,7 +138,7 @@ static void ccf_search(adns_state ads, const char *fn, int lno, const char *buf)
     *newchars++ = 0;
   }
 
-  free(ads->searchlist);
+  freesearchlist(ads);
   ads->nsearchlist= count;
   ads->searchlist= newptrs;
 }
@@ -259,7 +264,7 @@ static void ccf_include(adns_state ads, const char *fn, int lno, const char *buf
     configparseerr(ads,fn,lno,"`include' directive with no filename");
     return;
   }
-  readconfig(ads,buf);
+  readconfig(ads,buf,1);
 }
 
 static const struct configcommandinfo {
@@ -394,13 +399,14 @@ static const char *instrum_getenv(adns_state ads, const char *envvar) {
   return value;
 }
 
-static void readconfig(adns_state ads, const char *filename) {
+static void readconfig(adns_state ads, const char *filename, int warnmissing) {
   getline_ctx gl_ctx;
   
   gl_ctx.file= fopen(filename,"r");
   if (!gl_ctx.file) {
     if (errno == ENOENT) {
-      adns__debug(ads,-1,0,"configuration file `%s' does not exist",filename);
+      if (warnmissing)
+	adns__debug(ads,-1,0,"configuration file `%s' does not exist",filename);
       return;
     }
     saveerr(ads,errno);
@@ -429,7 +435,7 @@ static void readconfigenv(adns_state ads, const char *envvar) {
     return;
   }
   filename= instrum_getenv(ads,envvar);
-  if (filename) readconfig(ads,filename);
+  if (filename) readconfig(ads,filename,1);
 }
 
 static void readconfigenvtext(adns_state ads, const char *envvar) {
@@ -461,7 +467,8 @@ static int init_begin(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
   ads->iflags= flags;
   ads->diagfile= diagfile;
   ads->configerrno= 0;
-  LIST_INIT(ads->timew);
+  LIST_INIT(ads->udpw);
+  LIST_INIT(ads->tcpw);
   LIST_INIT(ads->childw);
   LIST_INIT(ads->output);
   ads->forallnext= 0;
@@ -516,7 +523,7 @@ static void init_abort(adns_state ads) {
   free(ads);
 }
 
-int adns_init(adns_state *ads_r, int flags, FILE *diagfile) {
+int adns_init(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
   adns_state ads;
   const char *res_options, *adns_res_options;
   int r;
@@ -529,7 +536,8 @@ int adns_init(adns_state *ads_r, int flags, FILE *diagfile) {
   ccf_options(ads,"RES_OPTIONS",-1,res_options);
   ccf_options(ads,"ADNS_RES_OPTIONS",-1,adns_res_options);
 
-  readconfig(ads,"/etc/resolv.conf");
+  readconfig(ads,"/etc/resolv.conf",1);
+  readconfig(ads,"/etc/resolv-adns.conf",0);
   readconfigenv(ads,"RES_CONF");
   readconfigenv(ads,"ADNS_RES_CONF");
 
@@ -556,7 +564,7 @@ int adns_init(adns_state *ads_r, int flags, FILE *diagfile) {
   return 0;
 }
 
-int adns_init_strcfg(adns_state *ads_r, int flags,
+int adns_init_strcfg(adns_state *ads_r, adns_initflags flags,
 		     FILE *diagfile, const char *configtext) {
   adns_state ads;
   int r;
@@ -580,7 +588,8 @@ int adns_init_strcfg(adns_state *ads_r, int flags,
 void adns_finish(adns_state ads) {
   adns__consistency(ads,0,cc_entex);
   for (;;) {
-    if (ads->timew.head) adns_cancel(ads->timew.head);
+    if (ads->udpw.head) adns_cancel(ads->udpw.head);
+    else if (ads->tcpw.head) adns_cancel(ads->tcpw.head);
     else if (ads->childw.head) adns_cancel(ads->childw.head);
     else if (ads->output.head) adns_cancel(ads->output.head);
     else break;
@@ -589,13 +598,15 @@ void adns_finish(adns_state ads) {
   if (ads->tcpsocket >= 0) close(ads->tcpsocket);
   adns__vbuf_free(&ads->tcpsend);
   adns__vbuf_free(&ads->tcprecv);
+  freesearchlist(ads);
   free(ads);
 }
 
 void adns_forallqueries_begin(adns_state ads) {
   adns__consistency(ads,0,cc_entex);
   ads->forallnext=
-    ads->timew.head ? ads->timew.head :
+    ads->udpw.head ? ads->udpw.head :
+    ads->tcpw.head ? ads->tcpw.head :
     ads->childw.head ? ads->childw.head :
     ads->output.head;
 }
@@ -610,12 +621,15 @@ adns_query adns_forallqueries_next(adns_state ads, void **context_r) {
     if (!qu) return 0;
     if (qu->next) {
       nqu= qu->next;
-    } else if (qu == ads->timew.tail) {
-      if (ads->childw.head) {
-	nqu= ads->childw.head;
-      } else {
-	nqu= ads->output.head;
-      }
+    } else if (qu == ads->udpw.tail) {
+      nqu=
+	ads->tcpw.head ? ads->tcpw.head :
+	ads->childw.head ? ads->childw.head :
+	ads->output.head;
+    } else if (qu == ads->tcpw.tail) {
+      nqu=
+	ads->childw.head ? ads->childw.head :
+	ads->output.head;
     } else if (qu == ads->childw.tail) {
       nqu= ads->output.head;
     } else {
@@ -626,9 +640,4 @@ adns_query adns_forallqueries_next(adns_state ads, void **context_r) {
   ads->forallnext= nqu;
   if (context_r) *context_r= qu->ctx.ext;
   return qu;
-}
-
-void adns__checkqueues(adns_state ads) {
-  adns_forallqueries_begin(ads);
-  while (adns_forallqueries_next(ads,0));
 }

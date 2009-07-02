@@ -11,20 +11,20 @@
  *  It is part of adns, which is
  *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
  *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
- *  
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software Foundation,
- *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
+ *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #ifndef ADNS_INTERNAL_H_INCLUDED
@@ -51,7 +51,9 @@ typedef unsigned char byte;
 #define MAXSORTLIST 15
 #define UDPMAXRETRIES 15
 #define UDPRETRYMS 2000
-#define TCPMS 30000
+#define TCPWAITMS 30000
+#define TCPCONNMS 14000
+#define TCPIDLEMS 30000
 #define MAXTTLBELIEVE (7*86400) /* any TTL > 7 days is capped */
 
 #define DNS_PORT 53
@@ -164,7 +166,7 @@ typedef struct {
 
 struct adns__query {
   adns_state ads;
-  enum { query_tosend, query_tcpwait, query_tcpsent, query_child, query_done } state;
+  enum { query_tosend, query_tcpw, query_childw, query_done } state;
   adns_query back, next, parent;
   struct { adns_query head, tail; } children;
   struct { adns_query back, next; } siblings;
@@ -175,7 +177,7 @@ struct adns__query {
   const typeinfo *typei;
   byte *query_dgram;
   int query_dglen;
-  
+
   vbuf vb;
   /* General-purpose messing-about buffer.
    * Wherever a `big' interface is crossed, this may be corrupted/changed
@@ -192,7 +194,7 @@ struct adns__query {
    * owner is set during querying unless we're doing searchlist,
    * in which case it is set only when we find an answer.
    */
-  
+
   byte *cname_dgram;
   int cname_dglen, cname_begin;
   /* If non-0, has been allocated using . */
@@ -207,10 +209,10 @@ struct adns__query {
    * but not done yet).  If flags doesn't have adns_qf_search then
    * the vbuf is initialised but empty and everything else is zero.
    */
-  
-  int id, flags, udpretries;
+
+  int id, flags, retries;
   int udpnextserver;
-  unsigned long udpsent, tcpfailed; /* bitmap indexed by server */
+  unsigned long udpsent; /* bitmap indexed by server */
   struct timeval timeout;
   time_t expires; /* Earliest expiry time of any record we used. */
 
@@ -219,43 +221,41 @@ struct adns__query {
   /* Possible states:
    *
    *  state   Queue   child  id   nextudpserver  udpsent     tcpfailed
-   *				  
+   *
    *  tosend  NONE    null   >=0  0              zero        zero
-   *  tosend  timew   null   >=0  any            nonzero     zero
+   *  tosend  udpw    null   >=0  any            nonzero     zero
    *  tosend  NONE    null   >=0  any            nonzero     zero
-   *				  
-   *  tcpwait timew   null   >=0  irrelevant     any         any
-   *  tcpsent timew   null   >=0  irrelevant     any         any
-   *				  
+   *
+   *  tcpw    tcpw    null   >=0  irrelevant     any         any
+   *
    *  child   childw  set    >=0  irrelevant     irrelevant  irrelevant
    *  child   NONE    null   >=0  irrelevant     irrelevant  irrelevant
    *  done    output  null   -1   irrelevant     irrelevant  irrelevant
    *
    * Queries are only not on a queue when they are actually being processed.
+   * Queries in state tcpw/tcpw have been sent (or are in the to-send buffer)
+   * iff the tcp connection is in state server_ok.
    *
    *			      +------------------------+
-   *             START -----> |      udp/NONE          |
+   *             START -----> |      tosend/NONE       |
    *			      +------------------------+
    *                         /                       |\  \
    *        too big for UDP /             UDP timeout  \  \ send via UDP
-   *        do this ASAP!  /              more retries  \  \   do this ASAP!
-   *                     |_                  desired     \  _|
-   *		  +---------------+     	    	+-----------+
-   *              | tcpwait/timew | ____                | udp/timew |
-   *              +---------------+     \	    	+-----------+
-   *                    |  ^             |                 | |
-   *     TCP conn'd;    |  | TCP died    |                 | |
-   *     send via TCP   |  | more        |     UDP timeout | |
-   *     do this ASAP!  |  | servers     |      no more    | |
-   *                    v  | to try      |      retries    | |
-   *              +---------------+      |      desired    | |
-   *              | tcpsent/timew | ____ |                 | |
-   *    	  +---------------+     \|                 | |
-   *                  \   \ TCP died     | TCP             | |
-   *                   \   \ no more     | timeout         / |
-   *                    \   \ servers    |                /  |
-   *                     \   \ to try    |               /   |
-   *                  got \   \          v             |_    / got
+   *        send via TCP   /              more retries  \  \
+   *        when conn'd   /                  desired     \  \
+   *                     |     	       	       	       	  |  |
+   *                     v				  |  v
+   *              +-----------+         	    	+-------------+
+   *              | tcpw/tcpw | ________                | tosend/udpw |
+   *              +-----------+         \	    	+-------------+
+   *                 |    |              |     UDP timeout | |
+   *                 |    |              |      no more    | |
+   *                 |    |              |      retries    | |
+   *                  \   | TCP died     |      desired    | |
+   *                   \   \ no more     |                 | |
+   *                    \   \ servers    | TCP            /  |
+   *                     \   \ to try    | timeout       /   |
+   *                  got \   \          v             |_    | got
    *                 reply \   _| +------------------+      / reply
    *   	       	       	    \  	  | done/output FAIL |     /
    *                         \    +------------------+    /
@@ -266,23 +266,33 @@ struct adns__query {
    *        need child query/ies /                     \ no child query
    *                            /                       \
    *                          |_                         _|
-   *		    +--------------+		       +----------------+
-   *                | child/childw | ----------------> | done/output OK |
-   *                +--------------+  children done    +----------------+
+   *		   +---------------+		       +----------------+
+   *               | childw/childw | ----------------> | done/output OK |
+   *               +---------------+  children done    +----------------+
    */
 };
+
+struct query_queue { adns_query head, tail; };
 
 struct adns__state {
   adns_initflags iflags;
   FILE *diagfile;
   int configerrno;
-  struct { adns_query head, tail; } timew, childw, output;
+  struct query_queue udpw, tcpw, childw, output;
   adns_query forallnext;
   int nextid, udpsocket, tcpsocket;
   vbuf tcpsend, tcprecv;
   int nservers, nsortlist, nsearchlist, searchndots, tcpserver, tcprecv_skip;
-  enum adns__tcpstate { server_disconnected, server_connecting, server_ok } tcpstate;
+  enum adns__tcpstate {
+    server_disconnected, server_connecting,
+    server_ok, server_broken
+  } tcpstate;
   struct timeval tcptimeout;
+  /* This will have tv_sec==0 if it is not valid.
+   * It will always be valid if tcpstate _connecting.
+   * When _ok, it will be nonzero if we are idle
+   * (ie, tcpw queue is empty) and counting down.
+   */
   struct sigaction stdsigpipe;
   sigset_t stdsigmask;
   struct pollfd pollfds_buf[MAX_POLLFDS];
@@ -298,7 +308,6 @@ struct adns__state {
 /* From setup.c: */
 
 int adns__setnonblock(adns_state ads, int fd); /* => errno value */
-void adns__checkqueues(adns_state ads); /* expensive walk, for checking */
 
 /* From general.c: */
 
@@ -332,7 +341,7 @@ const char *adns__diag_domain(adns_state ads, int serv, adns_query qu,
  * Returns either vb->buf, or a pointer to a string literal.  Do not modify
  * vb before using the return value.
  */
-  
+
 void adns__isort(void *array, int nobjs, int sz, void *tempbuf,
 		 int (*needswap)(void *context, const void *a, const void *b),
 		 void *context);
@@ -347,7 +356,8 @@ void adns__sigpipe_unprotect(adns_state);
 /* If SIGPIPE protection is not disabled, will block all signals except
  * SIGPIPE, and set SIGPIPE's disposition to SIG_IGN.  (And then restore.)
  * Each call to _protect must be followed by a call to _unprotect before
- * any significant amount of code gets to run.
+ * any significant amount of code gets to run, since the old signal mask
+ * is stored in the adns structure.
  */
 
 /* From transmit.c: */
@@ -365,16 +375,10 @@ adns_status adns__mkquery_frdgram(adns_state ads, vbuf *vb, int *id_r,
  * That domain must be correct and untruncated.
  */
 
-void adns__query_tcp(adns_query qu, struct timeval now);
-/* Query must be in state tcpwait/timew; it will be moved to a new state
- * if possible and no further processing can be done on it for now.
- * (Resulting state is one of tcpwait/timew (if server not connected),
- *  tcpsent/timew, child/childw or done/output.)
- *
- * adns__tcp_tryconnect should already have been called - _tcp
- * will only use an existing connection (if there is one), which it
- * may break.  If the conn list lost then the caller is responsible for any
- * reestablishment and retry.
+void adns__querysend_tcp(adns_query qu, struct timeval now);
+/* Query must be in state tcpw/tcpw; it will be sent if possible and
+ * no further processing can be done on it for now.  The connection
+ * might be broken, but no reconnect will be attempted.
  */
 
 void adns__query_send(adns_query qu, struct timeval now);
@@ -488,11 +492,19 @@ void adns__reset_preserved(adns_query qu);
 
 void adns__query_done(adns_query qu);
 void adns__query_fail(adns_query qu, adns_status stat);
-   
+
 /* From reply.c: */
 
 void adns__procdgram(adns_state ads, const byte *dgram, int len,
 		     int serv, int viatcp, struct timeval now);
+/* This function is allowed to cause new datagrams to be constructed
+ * and sent, or even new queries to be started.  However,
+ * query-sending functions are not allowed to call any general event
+ * loop functions in case they accidentally call this.
+ *
+ * Ie, receiving functions may call sending functions.
+ * Sending functions may NOT call receiving functions.
+ */
 
 /* From types.c: */
 
@@ -628,7 +640,8 @@ int vbuf__append_quoted1035(vbuf *vb, const byte *buf, int len);
 /* From event.c: */
 
 void adns__tcp_broken(adns_state ads, const char *what, const char *why);
-void adns__tcp_closenext(adns_state ads);
+/* what and why may be both 0, or both non-0. */
+
 void adns__tcp_tryconnect(adns_state ads, struct timeval now);
 
 void adns__autosys(adns_state ads, struct timeval now);
@@ -639,9 +652,7 @@ void adns__autosys(adns_state ads, struct timeval now);
 
 void adns__must_gettimeofday(adns_state ads, const struct timeval **now_io,
 			     struct timeval *tv_buf);
-void adns__timeouts(adns_state ads, int act,
-		    struct timeval **tv_io, struct timeval *tvbuf,
-		    struct timeval now);
+
 int adns__pollfds(adns_state ads, struct pollfd pollfds_buf[MAX_POLLFDS]);
 void adns__fdevents(adns_state ads,
 		    const struct pollfd *pollfds, int npollfds,
@@ -653,21 +664,18 @@ int adns__internal_check(adns_state ads,
 			 adns_answer **answer,
 			 void **context_r);
 
+void adns__timeouts(adns_state ads, int act,
+		    struct timeval **tv_io, struct timeval *tvbuf,
+		    struct timeval now);
+/* If act is !0, then this will also deal with the TCP connection
+ * if previous events broke it or require it to be connected.
+ */
+
 /* From check.c: */
 
 void adns__consistency(adns_state ads, adns_query qu, consistency_checks cc);
 
 /* Useful static inline functions: */
-
-static inline void timevaladd(struct timeval *tv_io, long ms) {
-  struct timeval tmp;
-  assert(ms>=0);
-  tmp= *tv_io;
-  tmp.tv_usec += (ms%1000)*1000000;
-  tmp.tv_sec += ms/1000;
-  if (tmp.tv_usec >= 1000000) { tmp.tv_sec++; tmp.tv_usec -= 1000; }
-  *tv_io= tmp;
-}
 
 static inline int ctype_whitespace(int c) { return c==' ' || c=='\n' || c=='\t'; }
 static inline int ctype_digit(int c) { return c>='0' && c<='9'; }

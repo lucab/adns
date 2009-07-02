@@ -85,7 +85,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	       qdcount);
     return;
   }
-  for (qu= ads->timew.head; qu; qu= nqu) {
+  for (qu= viatcp ? ads->tcpw.head : ads->udpw.head; qu; qu= nqu) {
     nqu= qu->next;
     if (qu->id != id) continue;
     if (dglen < qu->query_dglen) continue;
@@ -94,9 +94,9 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	       qu->query_dglen-DNS_HDRSIZE))
       continue;
     if (viatcp) {
-      if (qu->state != query_tcpsent) continue;
+      assert(qu->state == query_tcpw);
     } else {
-      if (qu->state != query_tosend) continue;
+      assert(qu->state == query_tosend);
       if (!(qu->udpsent & (1<<serv))) continue;
     }
     break;
@@ -113,7 +113,8 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
   anstart= qu->query_dglen;
   arstart= -1;
 
-  LIST_UNLINK(ads->timew,qu);
+  if (viatcp) LIST_UNLINK(ads->tcpw,qu);
+  else LIST_UNLINK(ads->udpw,qu);
   /* We're definitely going to do something with this query now */
   
   switch (rcode) {
@@ -318,7 +319,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 
   /* This may have generated some child queries ... */
   if (qu->children.head) {
-    qu->state= query_child;
+    qu->state= query_childw;
     LIST_LINK_TAIL(ads->childw,qu);
     return;
   }
@@ -349,7 +350,8 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     memcpy(newquery,qu->vb.buf,qu->vb.used);
   }
   
-  if (qu->state == query_tcpsent) qu->state= query_tosend;
+  if (qu->state == query_tcpw) qu->state= query_tosend;
+  qu->retries= 0;
   adns__reset_preserved(qu);
   adns__query_send(qu,now);
 }

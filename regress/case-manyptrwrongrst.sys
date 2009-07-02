@@ -446,7 +446,7 @@ default
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
  +0.000169
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.282776
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.275214
  select=1 rfds=[4] wfds=[] efds=[]
  +1.-921124
  recvfrom fd=4 buflen=512 *addrlen=16
@@ -471,7 +471,7 @@ default
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
  +0.000483
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.200363
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.192801
  select=1 rfds=[5] wfds=[] efds=[]
  +0.817055
  read fd=5 buflen=2
@@ -563,7 +563,7 @@ default
  read fd=5 buflen=2417
  read=EAGAIN
  +0.019409
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=59.059852
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.059852
  select=1 rfds=[5] wfds=[] efds=[]
  +0.028945
  read fd=5 buflen=2417
@@ -618,7 +618,7 @@ default
  read fd=5 buflen=957
  read=EAGAIN
  +0.000264
- select max=6 rfds=[4,5] wfds=[] efds=[5] to=59.021921
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=29.021921
  select=1 rfds=[5] wfds=[] efds=[]
  +0.063001
  read fd=5 buflen=957

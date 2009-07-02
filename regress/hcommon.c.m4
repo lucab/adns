@@ -28,6 +28,7 @@ m4_include(hmacros.i4)
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -51,6 +52,9 @@ const struct Terrno Terrnos[]= {
   { "ENOPROTOOPT",               ENOPROTOOPT                  },
   { "ENOSPC",                    ENOSPC                       },
   { "EWOULDBLOCK",               EWOULDBLOCK                  },
+  { "EHOSTUNREACH",              EHOSTUNREACH                 },
+  { "ECONNREFUSED",              ECONNREFUSED                 },
+  { "EPIPE",                     EPIPE                        },
   {  0,                          0                            }
 };
 
@@ -128,7 +132,7 @@ void Tvbbytes(const void *buf, int len) {
   const byte *bp;
   int i;
 
-  if (!len) { Tvba(" empty"); return; }
+  if (!len) { Tvba("\n     ."); return; }
   for (i=0, bp=buf; i<len; i++, bp++) {
     if (!(i&31)) Tvba("\n     ");
     else if (!(i&3)) Tvba(" ");
@@ -224,4 +228,81 @@ void Tnomem(void) {
 
 void Toutputerr(void) {
   Tfailed("write error on test harness output");
+}
+
+struct malloced {
+  struct malloced *next, *back;
+  size_t sz;
+  unsigned long count;
+  struct { double d; long ul; void *p; void (*fp)(void); } data;
+};
+
+static unsigned long malloccount, mallocfailat;
+static struct { struct malloced *head, *tail; } mallocedlist;
+
+#define MALLOCHSZ ((char*)&mallocedlist.head->data - (char*)mallocedlist.head)
+
+void *Hmalloc(size_t sz) {
+  struct malloced *newnode;
+  const char *mfavar;
+  char *ep;
+
+  assert(sz);
+
+  newnode= malloc(MALLOCHSZ + sz);  if (!newnode) Tnomem();
+
+  LIST_LINK_TAIL(mallocedlist,newnode);
+  newnode->sz= sz;
+  newnode->count= ++malloccount;
+  if (!mallocfailat) {
+    mfavar= getenv("ADNS_REGRESS_MALLOCFAILAT");
+    if (mfavar) {
+      mallocfailat= strtoul(mfavar,&ep,10);
+      if (!mallocfailat || *ep) Tfailed("ADNS_REGRESS_MALLOCFAILAT bad value");
+    } else {
+      mallocfailat= ~0UL;
+    }
+  }
+  assert(newnode->count != mallocfailat);
+  memset(&newnode->data,0xc7,sz);
+  return &newnode->data;
+}
+
+void Hfree(void *ptr) {
+  struct malloced *oldnode;
+
+  if (!ptr) return;
+
+  oldnode= (void*)((char*)ptr - MALLOCHSZ);
+  LIST_UNLINK(mallocedlist,oldnode);
+  memset(&oldnode->data,0x38,oldnode->sz);
+  free(oldnode);
+}
+
+void *Hrealloc(void *op, size_t nsz) {
+  struct malloced *oldnode;
+  void *np;
+  size_t osz;
+
+  if (op) { oldnode= (void*)((char*)op - MALLOCHSZ); osz= oldnode->sz; } else { osz= 0; }
+  np= Hmalloc(nsz);
+  memcpy(np,op, osz>nsz ? nsz : osz);
+  Hfree(op);
+  return np;
+}
+
+void Hexit(int rv) {
+  struct malloced *loopnode;
+
+  Tshutdown();
+  adns__vbuf_free(&vb);
+  adns__vbuf_free(&vbw);
+  if (mallocedlist.head) {
+    fprintf(stderr,"adns test harness: memory leaked:");
+    for (loopnode=mallocedlist.head; loopnode; loopnode=loopnode->next)
+      fprintf(stderr," %lu(%lu)",loopnode->count,(unsigned long)loopnode->sz);
+    putc('\n',stderr);
+    if (ferror(stderr)) exit(-1);
+  }
+  exit(rv);
 }

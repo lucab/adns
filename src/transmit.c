@@ -32,6 +32,7 @@
 #include <sys/uio.h>
 
 #include "internal.h"
+#include "tvarith.h"
 
 #define MKQUERY_START(vb) (rqp= (vb)->buf+(vb)->used)
 #define MKQUERY_ADDB(b) *rqp++= (b)
@@ -81,7 +82,7 @@ adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
   const char *p, *pe;
   adns_status st;
 
-  st= mkquery_header(ads,vb,id_r,strlen(owner)+2); if (st) return st;
+  st= mkquery_header(ads,vb,id_r,ol+2); if (st) return st;
   
   MKQUERY_START(vb);
 
@@ -157,7 +158,7 @@ adns_status adns__mkquery_frdgram(adns_state ads, vbuf *vb, int *id_r,
   return adns_s_ok;
 }
 
-void adns__query_tcp(adns_query qu, struct timeval now) {
+void adns__querysend_tcp(adns_query qu, struct timeval now) {
   byte length[2];
   struct iovec iov[2];
   int wr, r;
@@ -165,15 +166,18 @@ void adns__query_tcp(adns_query qu, struct timeval now) {
 
   if (qu->ads->tcpstate != server_ok) return;
 
+  assert(qu->state == query_tcpw);
+
   length[0]= (qu->query_dglen&0x0ff00U) >>8;
   length[1]= (qu->query_dglen&0x0ff);
 
   ads= qu->ads;
   if (!adns__vbuf_ensure(&ads->tcpsend,ads->tcpsend.used+qu->query_dglen+2)) return;
 
-  timevaladd(&now,TCPMS);
-  qu->timeout= now;
-  qu->state= query_tcpsent;
+  qu->retries++;
+
+  /* Reset idle timeout. */
+  ads->tcptimeout.tv_sec= ads->tcptimeout.tv_usec= 0;
 
   if (ads->tcpsend.used) {
     wr= 0;
@@ -207,11 +211,11 @@ void adns__query_tcp(adns_query qu, struct timeval now) {
 }
 
 static void query_usetcp(adns_query qu, struct timeval now) {
-  timevaladd(&now,TCPMS);
+  qu->state= query_tcpw;
   qu->timeout= now;
-  qu->state= query_tcpwait;
-  LIST_LINK_TAIL(qu->ads->timew,qu);
-  adns__query_tcp(qu,now);
+  timevaladd(&qu->timeout,TCPWAITMS);
+  LIST_LINK_TAIL(qu->ads->tcpw,qu);
+  adns__querysend_tcp(qu,now);
   adns__tcp_tryconnect(qu->ads,now);
 }
 
@@ -226,7 +230,7 @@ void adns__query_send(adns_query qu, struct timeval now) {
     return;
   }
 
-  if (qu->udpretries >= UDPMAXRETRIES) {
+  if (qu->retries >= UDPMAXRETRIES) {
     adns__query_fail(qu,adns_s_timeout);
     return;
   }
@@ -241,13 +245,13 @@ void adns__query_send(adns_query qu, struct timeval now) {
   
   r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
 	    (const struct sockaddr*)&servaddr,sizeof(servaddr));
-  if (r<0 && errno == EMSGSIZE) { query_usetcp(qu,now); return; }
+  if (r<0 && errno == EMSGSIZE) { qu->retries= 0; query_usetcp(qu,now); return; }
   if (r<0) adns__warn(ads,serv,0,"sendto failed: %s",strerror(errno));
   
-  timevaladd(&now,UDPRETRYMS);
   qu->timeout= now;
+  timevaladd(&qu->timeout,UDPRETRYMS);
   qu->udpsent |= (1<<serv);
   qu->udpnextserver= (serv+1)%ads->nservers;
-  qu->udpretries++;
-  LIST_LINK_TAIL(ads->timew,qu);
+  qu->retries++;
+  LIST_LINK_TAIL(ads->udpw,qu);
 }

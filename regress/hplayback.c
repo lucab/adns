@@ -9,9 +9,13 @@
 #include "harness.h"
 static FILE *Tinputfile, *Treportfile;
 static vbuf vb2;
+extern void Tshutdown(void) {
+  adns__vbuf_free(&vb2);
+}
 static void Tensurereportfile(void) {
   const char *fdstr;
   int fd;
+  if (Treportfile) return;
   Treportfile= stderr;
   fdstr= getenv("ADNS_TEST_REPORT_FD"); if (!fdstr) return;
   fd= atoi(fdstr);
@@ -207,7 +211,7 @@ void Q_vb(void) {
 int Hselect(
 	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 
 	) {
- int r;
+ int r, amtread;
  char *ep;
  Qselect(
 	max , rfds , wfds , efds , to 
@@ -216,10 +220,10 @@ int Hselect(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," select=",8)) Psyntax("syscall reply mismatch");
  if (vb2.buf[8] == 'E') {
   int e;
@@ -234,7 +238,8 @@ int Hselect(
 	Parg("rfds"); Pfdset(rfds,max); 
 	Parg("wfds"); Pfdset(wfds,max); 
 	Parg("efds"); Pfdset(efds,max); 
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
@@ -242,7 +247,7 @@ int Hselect(
 int Hpoll(
 	struct pollfd *fds , int nfds , int timeout 
 	) {
- int r;
+ int r, amtread;
  char *ep;
  Qpoll(
 	fds , nfds , timeout 
@@ -251,10 +256,10 @@ int Hpoll(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," poll=",6)) Psyntax("syscall reply mismatch");
  if (vb2.buf[6] == 'E') {
   int e;
@@ -267,7 +272,8 @@ int Hpoll(
   if (*ep && *ep!=' ') Psyntax("return value not E* or positive number");
   vb2.used= ep - (char*)vb2.buf;
         Parg("fds"); Ppollfds(fds,nfds); 
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
@@ -275,7 +281,7 @@ int Hpoll(
 int Hsocket(
 	int domain , int type , int protocol 
 	) {
- int r;
+ int r, amtread;
  char *ep;
 	Tmust("socket","domain",domain==AF_INET); 
   Tmust("socket","type",type==SOCK_STREAM || type==SOCK_DGRAM); 
@@ -286,10 +292,10 @@ int Hsocket(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," socket=",8)) Psyntax("syscall reply mismatch");
  if (vb2.buf[8] == 'E') {
   int e;
@@ -301,14 +307,15 @@ int Hsocket(
   r= strtoul(vb2.buf+8,&ep,10);
   if (*ep && *ep!=' ') Psyntax("return value not E* or positive number");
   vb2.used= ep - (char*)vb2.buf;
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
 int Hfcntl(
 	int fd , int cmd , ... 
 	) {
- int r;
+ int r, amtread;
 	va_list al; long arg; 
   Tmust("fcntl","cmd",cmd==F_SETFL || cmd==F_GETFL);
   if (cmd == F_SETFL) {
@@ -323,10 +330,10 @@ int Hfcntl(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," fcntl=",7)) Psyntax("syscall reply mismatch");
  if (vb2.buf[7] == 'E') {
   int e;
@@ -352,14 +359,15 @@ int Hfcntl(
   } else {
     Psyntax("fcntl not F_GETFL or F_SETFL");
   }
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
 int Hconnect(
 	int fd , const struct sockaddr *addr , int addrlen 
 	) {
- int r;
+ int r, amtread;
  Qconnect(
 	fd , addr , addrlen 
 	);
@@ -367,10 +375,10 @@ int Hconnect(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," connect=",9)) Psyntax("syscall reply mismatch");
  if (vb2.buf[9] == 'E') {
   int e;
@@ -382,14 +390,15 @@ int Hconnect(
   if (memcmp(vb2.buf+9,"OK",2)) Psyntax("success/fail not E* or OK");
   vb2.used= 9+2;
   r= 0;
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
 int Hclose(
 	int fd 
 	) {
- int r;
+ int r, amtread;
  Qclose(
 	fd 
 	);
@@ -397,10 +406,10 @@ int Hclose(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," close=",7)) Psyntax("syscall reply mismatch");
  if (vb2.buf[7] == 'E') {
   int e;
@@ -412,14 +421,15 @@ int Hclose(
   if (memcmp(vb2.buf+7,"OK",2)) Psyntax("success/fail not E* or OK");
   vb2.used= 7+2;
   r= 0;
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
 int Hsendto(
 	int fd , const void *msg , int msglen , unsigned int flags , const struct sockaddr *addr , int addrlen 
 	) {
- int r;
+ int r, amtread;
  char *ep;
 	Tmust("sendto","flags",flags==0); 
  Qsendto(
@@ -429,10 +439,10 @@ int Hsendto(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," sendto=",8)) Psyntax("syscall reply mismatch");
  if (vb2.buf[8] == 'E') {
   int e;
@@ -444,14 +454,15 @@ int Hsendto(
   r= strtoul(vb2.buf+8,&ep,10);
   if (*ep && *ep!=' ') Psyntax("return value not E* or positive number");
   vb2.used= ep - (char*)vb2.buf;
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }
 int Hrecvfrom(
 	int fd , void *buf , int buflen , unsigned int flags , struct sockaddr *addr , int *addrlen 
 	) {
- int r;
+ int r, amtread;
 	Tmust("recvfrom","flags",flags==0); 
 	Tmust("recvfrom","*addrlen",*addrlen>=sizeof(struct sockaddr_in)); 
  Qrecvfrom(
@@ -461,10 +472,10 @@ int Hrecvfrom(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," recvfrom=",10)) Psyntax("syscall reply mismatch");
  if (vb2.buf[10] == 'E') {
   int e;
@@ -477,7 +488,8 @@ int Hrecvfrom(
   vb2.used= 10+2;
   r= 0;
 	Parg("addr"); Paddr(addr,addrlen); 
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
 	r= Pbytes(buf,buflen); 
  P_updatetime();
  return r;
@@ -485,7 +497,7 @@ int Hrecvfrom(
 int Hread(
 	int fd , void *buf , size_t buflen 
 	) {
- int r;
+ int r, amtread;
  Qread(
 	fd , buflen 
 	);
@@ -493,10 +505,10 @@ int Hread(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," read=",6)) Psyntax("syscall reply mismatch");
  if (vb2.buf[6] == 'E') {
   int e;
@@ -508,7 +520,8 @@ int Hread(
   if (memcmp(vb2.buf+6,"OK",2)) Psyntax("success/fail not E* or OK");
   vb2.used= 6+2;
   r= 0;
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
 	r= Pbytes(buf,buflen); 
  P_updatetime();
  return r;
@@ -516,7 +529,7 @@ int Hread(
 int Hwrite(
 	int fd , const void *buf , size_t len 
 	) {
- int r;
+ int r, amtread;
  char *ep;
  Qwrite(
 	fd , buf , len 
@@ -525,10 +538,10 @@ int Hwrite(
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
  fprintf(Treportfile,"syscallr %s",vb2.buf);
- vb2.avail= strlen(vb2.buf);
- if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
- vb2.buf[vb2.avail]= 0;
+ vb2.buf[amtread]= 0;
  if (memcmp(vb2.buf," write=",7)) Psyntax("syscall reply mismatch");
  if (vb2.buf[7] == 'E') {
   int e;
@@ -540,7 +553,8 @@ int Hwrite(
   r= strtoul(vb2.buf+7,&ep,10);
   if (*ep && *ep!=' ') Psyntax("return value not E* or positive number");
   vb2.used= ep - (char*)vb2.buf;
- if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
  P_updatetime();
  return r;
 }

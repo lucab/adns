@@ -63,10 +63,14 @@ static void checkc_query(adns_state ads, adns_query qu) {
 
   assert(qu->udpnextserver < ads->nservers);
   assert(!(qu->udpsent & (~0UL << ads->nservers)));
-  assert(!(qu->tcpfailed & (~0UL << ads->nservers)));
-  assert(qu->udpretries <= UDPMAXRETRIES);
   assert(qu->search_pos <= ads->nsearchlist);
   if (qu->parent) DLIST_ASSERTON(qu, child, qu->parent->children, siblings.);
+}
+
+static void checkc_notcpbuf(adns_state ads) {
+  assert(!ads->tcpsend.used);
+  assert(!ads->tcprecv.used);
+  assert(!ads->tcprecv_skip);
 }
 
 static void checkc_global(adns_state ads) {
@@ -82,10 +86,12 @@ static void checkc_global(adns_state ads) {
   switch (ads->tcpstate) {
   case server_connecting:
     assert(ads->tcpsocket >= 0);
-  case server_disconnected: /* fall through */
-    assert(!ads->tcpsend.used);
-    assert(!ads->tcprecv.used);
-    assert(!ads->tcprecv_skip);
+    checkc_notcpbuf(ads);
+    break;
+  case server_disconnected:
+  case server_broken:
+    assert(ads->tcpsocket == -1);
+    checkc_notcpbuf(ads);
     break;
   case server_ok:
     assert(ads->tcpsocket >= 0);
@@ -98,24 +104,26 @@ static void checkc_global(adns_state ads) {
   assert(ads->searchlist || !ads->nsearchlist);
 }
 
-static void checkc_queue_timew(adns_state ads) {
+static void checkc_queue_udpw(adns_state ads) {
   adns_query qu;
   
-  DLIST_CHECK(ads->timew, qu, , {
-    switch (qu->state) {
-    case query_tosend:
-      assert(qu->udpsent);
-      assert(!qu->tcpfailed);
-      break;
-    case query_tcpwait:
-      assert(ads->tcpstate != server_ok);
-      break;
-    case query_tcpsent:
-      break;
-    default:
-      assert(!"timew state");
-    }
+  DLIST_CHECK(ads->udpw, qu, , {
+    assert(qu->state==query_tosend);
+    assert(qu->retries <= UDPMAXRETRIES);
+    assert(qu->udpsent);
     assert(!qu->children.head && !qu->children.tail);
+    checkc_query(ads,qu);
+    checkc_query_alloc(ads,qu);
+  });
+}
+
+static void checkc_queue_tcpw(adns_state ads) {
+  adns_query qu;
+  
+  DLIST_CHECK(ads->tcpw, qu, , {
+    assert(qu->state==query_tcpw);
+    assert(!qu->children.head && !qu->children.tail);
+    assert(qu->retries <= ads->nservers+1);
     checkc_query(ads,qu);
     checkc_query_alloc(ads,qu);
   });
@@ -125,7 +133,7 @@ static void checkc_queue_childw(adns_state ads) {
   adns_query parent, child;
 
   DLIST_CHECK(ads->childw, parent, , {
-    assert(parent->state == query_child);
+    assert(parent->state == query_childw);
     assert(parent->children.head);
     DLIST_CHECK(parent->children, child, siblings., {
       assert(child->parent == parent);
@@ -165,18 +173,20 @@ void adns__consistency(adns_state ads, adns_query qu, consistency_checks cc) {
   }
 
   checkc_global(ads);
-  checkc_queue_timew(ads);
+  checkc_queue_udpw(ads);
+  checkc_queue_tcpw(ads);
   checkc_queue_childw(ads);
   checkc_queue_output(ads);
 
   if (qu) {
     switch (qu->state) {
     case query_tosend:
-    case query_tcpwait:
-    case query_tcpsent:
-      DLIST_ASSERTON(qu, search, ads->timew, );
+      DLIST_ASSERTON(qu, search, ads->udpw, );
       break;
-    case query_child:
+    case query_tcpw:
+      DLIST_ASSERTON(qu, search, ads->tcpw, );
+      break;
+    case query_childw:
       DLIST_ASSERTON(qu, search, ads->childw, );
       break;
     case query_done:
