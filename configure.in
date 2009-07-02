@@ -20,6 +20,15 @@ AC_INIT(src/adns.h)
 AC_CONFIG_HEADER(src/config.h)
 AC_PROG_CC
 AC_PROG_RANLIB
+
+ADNS_C_GETFUNC(socket,socket)
+ADNS_C_GETFUNC(inet_ntoa,nsl)
+
+ADNS_C_GETFUNC(inet_aton,resolv,[
+ LIBS="-lresolv $LIBS";
+ AC_MSG_WARN([inet_aton is in libresolv, urgh.  Must use -lresolv.])
+])
+
 ADNS_C_GCCATTRIB
 
 AC_SUBST(WARNS)

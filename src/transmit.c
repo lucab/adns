@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <sys/types.h>
 #include <sys/uio.h>
 
 #include "internal.h"
@@ -234,7 +235,8 @@ void adns__query_udp(adns_query qu, struct timeval now) {
   servaddr.sin_addr= ads->servers[serv].addr;
   servaddr.sin_port= htons(DNS_PORT);
   
-  r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,&servaddr,sizeof(servaddr));
+  r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
+	    (const struct sockaddr*)&servaddr,sizeof(servaddr));
   if (r<0 && errno == EMSGSIZE) { query_usetcp(qu,now); return; }
   if (r<0) adns__warn(ads,serv,0,"sendto failed: %s",strerror(errno));
   

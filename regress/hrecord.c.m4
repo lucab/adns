@@ -104,6 +104,18 @@ int H$1(hm_args_massage($3,void)) {
   if (r==-1) { Tvberrno(e); goto x_error; }
   Tmust("$1","return",r<=$'`1);
   Tvba("OK");')
+ m4_define(`hm_rv_fcntl',`
+  if (r==-1) { Tvberrno(e); goto x_error; }
+  if (cmd == F_GETFL) {
+    Tvbf(r & O_NONBLOCK ? "O_NONBLOCK|..." : "~O_NONBLOCK&...");
+  } else {
+    if (cmd == F_SETFL) {
+      Tmust("$1","return",!r);
+    } else {
+      Tmust("cmd","F_GETFL/F_SETFL",0);
+    }
+    Tvba("OK");
+  }')
  $2
 
  hm_create_nothing
@@ -119,6 +131,7 @@ int H$1(hm_args_massage($3,void)) {
  m4_define(`hm_rv_fd',`x_error:')
  m4_define(`hm_rv_succfail',`x_error:')
  m4_define(`hm_rv_len',`x_error:')
+ m4_define(`hm_rv_fcntl',`x_error:')
  m4_define(`hm_rv_must',`')
  $2
 

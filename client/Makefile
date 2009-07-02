@@ -38,4 +38,4 @@ uninstall:
 adnstest:	adnstest.o $(srcdir)/../dynamic/$(SHLIBFILE)
 
 adnstest_s:	adnstest.o $(srcdir)/../src/libadns.a
-		$(CC) $(LDFLAGS) $^ -o $@ $(LIBS)
+		$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)

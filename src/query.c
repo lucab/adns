@@ -76,7 +76,7 @@ static adns_query query_alloc(adns_state ads, const typeinfo *typei,
   qu->answer->type= typei->type;
   qu->answer->expires= -1;
   qu->answer->nrrs= 0;
-  qu->answer->rrs= 0;
+  qu->answer->rrs.untyped= 0;
   qu->answer->rrsz= typei->rrsz;
 
   return qu;
@@ -334,7 +334,7 @@ void adns__reset_cnameonly(adns_query qu) {
   assert(!qu->final_allocspace);
   cancel_children(qu);
   qu->answer->nrrs= 0;
-  qu->answer->rrs= 0;
+  qu->answer->rrs.untyped= 0;
   qu->interim_allocd= qu->answer->cname ? MEM_ROUND(strlen(qu->answer->cname)+1) : 0;
 }
 

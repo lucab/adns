@@ -53,3 +53,11 @@ define(ADNS_C_GCCATTRIB,[
     AC_MSG_RESULT(no)),
   AC_MSG_RESULT(no))
 ])
+
+define(ADNS_C_GETFUNC,[
+ AC_CHECK_FUNC([$1],,[
+  AC_CHECK_LIB([$2],[$1],[$3],[
+    AC_MSG_ERROR([cannot find library function $1])
+  ])
+ ])
+])

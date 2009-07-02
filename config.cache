@@ -12,6 +12,9 @@
 # config.status only pays attention to the cache file if you give it the
 # --recheck option to rerun configure.
 #
+ac_cv_func_inet_aton=${ac_cv_func_inet_aton=yes}
+ac_cv_func_inet_ntoa=${ac_cv_func_inet_ntoa=yes}
+ac_cv_func_socket=${ac_cv_func_socket=yes}
 ac_cv_prog_CC=${ac_cv_prog_CC=gcc}
 ac_cv_prog_RANLIB=${ac_cv_prog_RANLIB=ranlib}
 ac_cv_prog_cc_cross=${ac_cv_prog_cc_cross=no}

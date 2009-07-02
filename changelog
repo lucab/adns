@@ -1,8 +1,29 @@
+adns (0.2) experimental; urgency=low
+
+  Portability fixes for compilation on various platforms:
+  * Include <sys/socket.h> and <netinet/in.h> in files with <arpa/inet.h>.
+  * Don't use GCC union assignment feature (.rrs=0 => .rrs.untyped=0).
+  * Explictly cast things to [const] struct sockaddr* in syscall args.
+  * Check whether we need -lsocket.
+  * Include <sys/times.h> in a few more files.
+  * Include <unistd.h> and <sys/time.h> for select.
+  * Look for inet_aton and inet_ntoa (in -lnsl and -lsocket).
+  * LDLIBS removed from dependency lists (some makes don't support this).
+  * An `ambiguous else' warning from some compilers in types.c is removed.
+
+  Other changes:
+  * Added COPYING (copy of the GPL).
+  * Regression test failure output improved.
+  * Missing targets in regress/Makefile.in added.
+  * Regression test doesn't rely on value of fcntl flags eg O_NONBLOCK.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 20 May 1999 00:27:32 +0100
+
 adns (0.1) experimental; urgency=low
 
   * Initial public alpha release.
 
- --
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat, 17 April 1999 17:42:19
 
 Local variables:
 mode: debian-changelog

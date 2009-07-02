@@ -5,10 +5,10 @@ default
  socket=4
  +0.000222
  fcntl fd=4 cmd=F_GETFL
- fcntl=2
+ fcntl=~O_NONBLOCK&...
  +0.000085
- fcntl fd=4 cmd=F_SETFL 2050
- fcntl=0
+ fcntl fd=4 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
  +0.000069
  sendto fd=4 addr=172.18.45.6:53
      311f0100 00010000 00000000 00000600 01.

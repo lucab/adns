@@ -40,6 +40,8 @@ ALLOBJS=	$(HARNLOBJS) dtest.o hrecord.o hplayback.o hcommon.o
 check:		$(TARGETS)
 		./checkall
 
+all install uninstall:
+
 hrecord:	adnstest_c.o hrecord.o hcommon.o $(HARNLOBJS)
 hplayback:	adnstest_c.o hplayback.o hcommon.o $(HARNLOBJS)
 

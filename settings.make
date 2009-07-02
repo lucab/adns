@@ -24,6 +24,7 @@ SHLIBSONAME=	libadns.so.$(MAJOR)
 
 CC=		gcc
 CFLAGS=		$(AUTOCFLAGS) $(WARNS) $(WERROR) $(DIRCFLAGS) $(XCFLAGS)
+LDLIBS=		 $(XLIBS)
 AUTOCFLAGS=	-g -O2
 WARNS=		-Wall -Wmissing-prototypes -Wwrite-strings -Wstrict-prototypes -Wcast-qual -Wpointer-arith
 #WERROR=	-Werror

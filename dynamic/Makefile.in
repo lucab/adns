@@ -33,7 +33,7 @@ uninstall:
 
 $(SHLIBFILE):	$(ALLOBJS)
 		rm -f $@
-		$(MKSHLIB_1) $@ $(MKSHLIB_2) $(ALLOBJS) $(MKSHLIB_3)
+		$(MKSHLIB_1) $@ $(MKSHLIB_2) $(ALLOBJS) $(LDLIBS) $(MKSHLIB_3)
 
 %_p.o:		$(srcdir)/../src/%.c $(srcdir)/../src/adns.h \
 			$(srcdir)/../src/internal.h $(srcdir)/../src/config.h

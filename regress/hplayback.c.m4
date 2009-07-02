@@ -215,6 +215,7 @@ int H$1(hm_args_massage($3,void)) {
  m4_define(`hm_rv_len',`')
  m4_define(`hm_rv_must',`')
  m4_define(`hm_rv_succfail',`')
+ m4_define(`hm_rv_fcntl',`')
  $2
 
  hm_create_hqcall_vars
@@ -259,6 +260,23 @@ int H$1(hm_args_massage($3,void)) {
   vb2.used= ep - (char*)vb2.buf;
  ')
  m4_define(`hm_rv_fd',`hm_rv_any')
+ m4_define(`hm_rv_fcntl',`
+  r= 0;
+  if (cmd == F_GETFL) {
+    if (!memcmp(vb2.buf+hm_r_offset,"O_NONBLOCK|...",14)) {
+      r= O_NONBLOCK;
+      vb2.used= hm_r_offset+14;
+    } else if (!memcmp(vb2.buf+hm_r_offset,"~O_NONBLOCK&...",15)) {
+      vb2.used= hm_r_offset+15;
+    } else {
+      Psyntax("fcntl flags not O_NONBLOCK|... or ~O_NONBLOCK&...");
+    }
+  } else if (cmd == F_SETFL) {
+    hm_rv_succfail
+  } else {
+    Psyntax("fcntl not F_GETFL or F_SETFL");
+  }
+ ')
  $2
 
  hm_create_nothing

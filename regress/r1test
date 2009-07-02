@@ -22,16 +22,22 @@ set -e
 
 echo "rc=$rc" >>$ocase.out
 
-for part in out err
+failed=false
+for part in err out
 do
 	if diff -u -- "$case.$part" "$ocase.$part"
 	then
 		:
 	else
-		echo >&2 "FAILED $case - WRONG OUTPUT"
-		exit 2
+		failed=true
 	fi
 done
+
+if $failed
+then
+	echo >&2 "FAILED $case - WRONG OUTPUT - lines of syscall remaining `wc -l`"
+	exit 2
+fi
 
 echo -n "$casename "
 

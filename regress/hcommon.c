@@ -64,9 +64,11 @@ void Qfcntl(
  Tvba("fcntl");
 	Tvbf(" fd=%d",fd); 
   if (cmd == F_SETFL) {
-   Tvbf(" cmd=F_SETFL %ld",arg);
-  } else {
+   Tvbf(" cmd=F_SETFL %s",arg & O_NONBLOCK ? "O_NONBLOCK|..." : "~O_NONBLOCK&...");
+  } else if (cmd == F_GETFL) {
    Tvba(" cmd=F_GETFL");
+  } else {
+   Tmust("cmd","F_GETFL/F_SETFL",0);
   } 
   Q_vb();
 }

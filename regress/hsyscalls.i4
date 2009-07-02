@@ -19,13 +19,14 @@ m4_dnl  along with this program; if not, write to the Free Software Foundation,
 m4_dnl  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
 
 m4_dnl each system call has
-m4_dnl  hm_syscall(<name>,<returnvalue>,<args>
+m4_dnl  hm_syscall(<name>,<returnvalue>,<args>)
 m4_dnl <returnvalue> is one of
 m4_dnl  hm_rv_must       must succeed and return 0
 m4_dnl  hm_rv_any        any nonnegative return allowed, -1 means see errno
 m4_dnl  hm_rv_fd         file descriptor is returned, -1 means see errno
 m4_dnl  hm_rv_succfail   returns 0 (ok) or -1 (see errno)
 m4_dnl  hm_rv_len(<max>) returns length read/written, must be <=max, -1 => errno
+m4_dnl  hm_rv_fcntl      syscall is fcntl, do special processing
 m4_dnl <args> is list of macros for arguments, each followed by hm_na
 m4_dnl  hm_arg_nullptr(<type>,<arg>)    pointer of type type, must be null
 m4_dnl  hm_arg_int(<arg>)               signed integer
@@ -63,7 +64,7 @@ hm_syscall(
 ')
 
 hm_syscall(
-	fcntl, `hm_rv_any', `
+	fcntl, `hm_rv_fcntl', `
 	hm_arg_fd(fd) hm_na
 	hm_arg_fcntl_cmd_arg(cmd,arg) hm_na
 ')

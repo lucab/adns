@@ -25,8 +25,13 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/time.h>
 #include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include "internal.h"
@@ -100,7 +105,7 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
     addr.sin_family= AF_INET;
     addr.sin_port= htons(DNS_PORT);
     addr.sin_addr= ads->servers[ads->tcpserver].addr;
-    r= connect(fd,&addr,sizeof(addr));
+    r= connect(fd,(const struct sockaddr*)&addr,sizeof(addr));
     ads->tcpsocket= fd;
     ads->tcpstate= server_connecting;
     if (r==0) { tcp_connected(ads,now); continue; }
@@ -305,7 +310,8 @@ static int internal_callback(adns_state ads, int maxfd,
     count++;
     for (;;) {
       udpaddrlen= sizeof(udpaddr);
-      r= recvfrom(ads->udpsocket,udpbuf,sizeof(udpbuf),0,&udpaddr,&udpaddrlen);
+      r= recvfrom(ads->udpsocket,udpbuf,sizeof(udpbuf),0,
+		  (struct sockaddr*)&udpaddr,&udpaddrlen);
       if (r<0) {
 	if (!(errno == EAGAIN || errno == EWOULDBLOCK ||
 	      errno == EINTR || errno == ENOMEM || errno == ENOBUFS))

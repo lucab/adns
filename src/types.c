@@ -23,12 +23,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include "internal.h"
 
 #define R_NOMEM           return adns_s_nomemory
-#define CSP_ADDSTR(s)     if (!adns__vbuf_appendstr(vb,(s))) R_NOMEM; else;
+#define CSP_ADDSTR(s)     do { if (!adns__vbuf_appendstr(vb,(s))) R_NOMEM; } while (0)
 
 /*
  * order of sections:

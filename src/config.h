@@ -13,6 +13,12 @@
 /* Define if printf-format argument lists a la GCC are available.  */
 #define HAVE_GNUC25_PRINTFFORMAT 1
 
+/* Define if you have the nsl library (-lnsl).  */
+/* #undef HAVE_LIBNSL */
+
+/* Define if you have the socket library (-lsocket).  */
+/* #undef HAVE_LIBSOCKET */
+
 /* Use the definitions: */
 
 /* GNU C attributes. */

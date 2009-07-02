@@ -87,9 +87,11 @@ void Q$1(hm_args_massage($3,void)) {
  m4_define(`hm_arg_fd', `Tvbf(" $'`1=%d",$'`1);')
  m4_define(`hm_arg_fcntl_cmd_arg', `
   if ($'`1 == F_SETFL) {
-   Tvbf(" $'`1=F_SETFL %ld",arg);
-  } else {
+   Tvbf(" $'`1=F_SETFL %s",arg & O_NONBLOCK ? "O_NONBLOCK|..." : "~O_NONBLOCK&...");
+  } else if ($'`1 == F_GETFL) {
    Tvba(" $'`1=F_GETFL");
+  } else {
+   Tmust("$'`1","F_GETFL/F_SETFL",0);
   }')
  m4_define(`hm_arg_addr_in', `Tvba(" $'`1="); Tvbaddr($'`1,$'`2);')
  m4_define(`hm_arg_bytes_in', `')

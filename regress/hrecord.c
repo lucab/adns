@@ -107,7 +107,16 @@ int Hfcntl(
  vb.used= 0;
  Tvba("fcntl=");
   if (r==-1) { Tvberrno(e); goto x_error; }
-  Tvbf("%d",r);
+  if (cmd == F_GETFL) {
+    Tvbf(r & O_NONBLOCK ? "O_NONBLOCK|..." : "~O_NONBLOCK&...");
+  } else {
+    if (cmd == F_SETFL) {
+      Tmust("fcntl","return",!r);
+    } else {
+      Tmust("cmd","F_GETFL/F_SETFL",0);
+    }
+    Tvba("OK");
+  }
  x_error:
  R_recordtime();
  R_vb();

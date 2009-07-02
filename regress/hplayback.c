@@ -228,7 +228,6 @@ int Hfcntl(
 	int fd , int cmd , ... 
 	) {
  int r;
- char *ep;
 	va_list al; long arg; 
   Tmust("fcntl","cmd",cmd==F_SETFL || cmd==F_GETFL);
   if (cmd == F_SETFL) {
@@ -255,9 +254,23 @@ int Hfcntl(
   errno= e;
   return -1;
  }
-  r= strtoul(vb2.buf+7,&ep,10);
-  if (*ep && *ep!=' ') Psyntax("return value not E* or positive number");
-  vb2.used= ep - (char*)vb2.buf;
+  r= 0;
+  if (cmd == F_GETFL) {
+    if (!memcmp(vb2.buf+7,"O_NONBLOCK|...",14)) {
+      r= O_NONBLOCK;
+      vb2.used= 7+14;
+    } else if (!memcmp(vb2.buf+7,"~O_NONBLOCK&...",15)) {
+      vb2.used= 7+15;
+    } else {
+      Psyntax("fcntl flags not O_NONBLOCK|... or ~O_NONBLOCK&...");
+    }
+  } else if (cmd == F_SETFL) {
+  if (memcmp(vb2.buf+7,"OK",2)) Psyntax("success/fail not E* or OK");
+  vb2.used= 7+2;
+  r= 0;
+  } else {
+    Psyntax("fcntl not F_GETFL or F_SETFL");
+  }
  if (vb2.used != vb2.avail) Psyntax("junk at end of line");
  P_updatetime();
  return r;
