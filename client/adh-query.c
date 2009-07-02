@@ -79,7 +79,7 @@ static void prep_query(struct query_node **qun_r, int *quflags_r) {
   *qun_r= qun;
 }
   
-void of_ptr(const struct optioninfo *oi, const char *arg) {
+void of_ptr(const struct optioninfo *oi, const char *arg, const char *arg2) {
   struct query_node *qun;
   int quflags, r;
   struct sockaddr_in sa;
@@ -89,6 +89,7 @@ void of_ptr(const struct optioninfo *oi, const char *arg) {
   if (!inet_aton(arg,&sa.sin_addr)) usageerr("invalid IP address %s",arg);
 
   prep_query(&qun,&quflags);
+  qun->owner= xstrsave(arg);
   r= adns_submit_reverse(ads,
 			 (struct sockaddr*)&sa,
 			 ov_type == adns_r_none ? adns_r_ptr : ov_type,
@@ -100,11 +101,35 @@ void of_ptr(const struct optioninfo *oi, const char *arg) {
   LIST_LINK_TAIL(outstanding,qun);
 }
 
+void of_reverse(const struct optioninfo *oi, const char *arg, const char *arg2) {
+  struct query_node *qun;
+  int quflags, r;
+  struct sockaddr_in sa;
+
+  memset(&sa,0,sizeof(sa));
+  sa.sin_family= AF_INET;
+  if (!inet_aton(arg,&sa.sin_addr)) usageerr("invalid IP address %s",arg);
+
+  prep_query(&qun,&quflags);
+  qun->owner= xmalloc(strlen(arg) + strlen(arg2) + 2);
+  sprintf(qun->owner, "%s %s", arg,arg2);
+  r= adns_submit_reverse_any(ads,
+			     (struct sockaddr*)&sa, arg2,
+			     ov_type == adns_r_none ? adns_r_txt : ov_type,
+			     quflags,
+			     qun,
+			     &qun->qu);
+  if (r) sysfail("adns_submit_reverse",r);
+
+  LIST_LINK_TAIL(outstanding,qun);
+}
+
 void query_do(const char *domain) {
   struct query_node *qun;
   int quflags, r;
 
   prep_query(&qun,&quflags);
+  qun->owner= xstrsave(domain);
   r= adns_submit(ads, domain,
 		 ov_type == adns_r_none ? adns_r_addr : ov_type,
 		 quflags,
@@ -145,8 +170,12 @@ static void print_ttl(struct query_node *qun, adns_answer *answer) {
   if (printf("%lu ",ttl) == EOF) outerr();
 }
 
+static const char *owner_show(struct query_node *qun, adns_answer *answer) {
+  return answer->owner ? answer->owner : qun->owner;
+}
+
 static void print_owner_ttl(struct query_node *qun, adns_answer *answer) {
-  if (qun->pqfr.show_owner) print_withspace(answer->owner);
+  if (qun->pqfr.show_owner) print_withspace(owner_show(qun,answer));
   print_ttl(qun,answer);
 }
 
@@ -195,15 +224,15 @@ static void print_dnsfail(adns_status st, struct query_node *qun, adns_answer *a
   }
   assert(ov_format == fmt_simple);
   if (st == adns_s_nxdomain) {
-    r= fprintf(stderr,"%s does not exist\n", answer->owner);
+    r= fprintf(stderr,"%s does not exist\n", owner_show(qun,answer));
   } else {
     ist= adns_rr_info(answer->type, &typename, 0,0,0,0);
     if (st == adns_s_nodata) {
-      r= fprintf(stderr,"%s has no %s record\n", answer->owner, typename);
+      r= fprintf(stderr,"%s has no %s record\n", owner_show(qun,answer), typename);
     } else {
       statusstring= adns_strerror(st);
       r= fprintf(stderr,"Error during DNS %s lookup for %s: %s\n",
-		 typename, answer->owner, statusstring);
+		 typename, owner_show(qun,answer), statusstring);
     }
   }
   if (r == EOF) sysfail("write error message to stderr",errno);
@@ -233,7 +262,7 @@ void query_done(struct query_node *qun, adns_answer *answer) {
     }
   }
   if (qun->pqfr.show_owner) {
-    realowner= answer->cname ? answer->cname : answer->owner;
+    realowner= answer->cname ? answer->cname : owner_show(qun,answer);
     assert(realowner);
   } else {
     realowner= 0;
@@ -257,12 +286,12 @@ void query_done(struct query_node *qun, adns_answer *answer) {
   dequeue_query(qun);
 }
 
-void of_asynch_id(const struct optioninfo *oi, const char *arg) {
+void of_asynch_id(const struct optioninfo *oi, const char *arg, const char *arg2) {
   free(ov_id);
   ov_id= xstrsave(arg);
 }
 
-void of_cancel_id(const struct optioninfo *oi, const char *arg) {
+void of_cancel_id(const struct optioninfo *oi, const char *arg, const char *arg2) {
   struct query_node *qun;
 
   for (qun= outstanding.head;

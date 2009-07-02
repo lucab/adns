@@ -35,12 +35,11 @@ int vbuf__append_quoted1035(vbuf *vb, const byte *buf, int len) {
     qbuf[0]= 0;
     for (i=0; i<len; i++) {
       ch= buf[i];
-      if (ch == '.' || ch == '"' || ch == '(' || ch == ')' ||
-	  ch == '@' || ch == ';' || ch == '$' || ch == '\\') {
-	sprintf(qbuf,"\\%c",ch);
-	break;
-      } else if (ch <= ' ' || ch >= 127) {
+      if (ch <= ' ' || ch >= 127) {
 	sprintf(qbuf,"\\%03o",ch);
+	break;
+      } else if (!ctype_domainunquoted(ch)) {
+	sprintf(qbuf,"\\%c",ch);
 	break;
       }
     }

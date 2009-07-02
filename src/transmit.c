@@ -77,7 +77,7 @@ static adns_status mkquery_footer(vbuf *vb, adns_rrtype type) {
 adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
 			  const char *owner, int ol,
 			  const typeinfo *typei, adns_queryflags flags) {
-  int ll, c, nlabs;
+  int ll, c, nbytes;
   byte label[255], *rqp;
   const char *p, *pe;
   adns_status st;
@@ -87,7 +87,7 @@ adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
   MKQUERY_START(vb);
 
   p= owner; pe= owner+ol;
-  nlabs= 0;
+  nbytes= 0;
   while (p!=pe) {
     ll= 0;
     while (p!=pe && (c= *p++)!='.') {
@@ -115,7 +115,9 @@ adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
       label[ll++]= c;
     }
     if (!ll) return adns_s_querydomaininvalid;
-    if (nlabs++ > 63) return adns_s_querydomaintoolong;
+    if (ll > DNS_MAXLABEL) return adns_s_querydomaintoolong;
+    nbytes+= ll+1;
+    if (nbytes >= DNS_MAXDOMAIN) return adns_s_querydomaintoolong;
     MKQUERY_ADDB(ll);
     memcpy(rqp,label,ll); rqp+= ll;
   }

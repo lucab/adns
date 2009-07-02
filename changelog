@@ -1,3 +1,18 @@
+adns (0.7) BETA; urgency=medium
+
+  * New adns_submit_reverse_any for eg RBL lookups, and corresponding
+    option to adnshost.
+  * README updated (from www home page).
+
+  * In answers, quote all except alphanums and - _ / + (and document).
+  * Don't reject specials in cnames even without adns_qf_quotefail_cname.
+  * Better checking of long domain names and labels in queries.
+  * answer->owner may be null on error.  Documented, and adnshost copes.
+  * Better reporting of unexpected or weird replies from nameserver.
+  * Add test case for recursion (infinite loop) domain compression.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu,  2 Mar 2000 01:55:53 +0000
+
 adns (0.6) BETA; urgency=high
 
   Core library bugfixes:

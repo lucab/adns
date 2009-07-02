@@ -58,6 +58,7 @@ typedef unsigned char byte;
 
 #define DNS_PORT 53
 #define DNS_MAXUDP 512
+#define DNS_MAXLABEL 63
 #define DNS_MAXDOMAIN 255
 #define DNS_HDRSIZE 12
 #define DNS_IDOFFSET 0
@@ -683,6 +684,9 @@ static inline int ctype_alpha(int c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 static inline int ctype_822special(int c) { return strchr("()<>@,;:\\\".[]",c) != 0; }
+static inline int ctype_domainunquoted(int c) {
+  return ctype_alpha(c) || ctype_digit(c) || (strchr("-_/+",c) != 0);
+}
 
 static inline int errno_resources(int e) { return e==ENOMEM || e==ENOBUFS; }
 

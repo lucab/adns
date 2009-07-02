@@ -244,7 +244,7 @@ static const struct sinfo {
 
   SINFO(  querydomainwrong,    "Domain invalid for particular DNS query type"  ),
   SINFO(  querydomaininvalid,  "Domain name is syntactically invalid"          ),
-  SINFO(  querydomaintoolong,  "Domain name is too long"                       ),
+  SINFO(  querydomaintoolong,  "Domain name or component is too long"          ),
 
   SINFO(  nxdomain,            "No such domain"                                ),
   SINFO(  nodata,              "No such data"                                  )

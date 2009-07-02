@@ -77,32 +77,71 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     adns__diag(ads,serv,0,"server sent us unknown opcode %d (wanted 0=QUERY)",opcode);
     return;
   }
-  if (!qdcount) {
-    adns__diag(ads,serv,0,"server sent reply without quoting our question");
-    return;
-  } else if (qdcount>1) {
-    adns__diag(ads,serv,0,"server claimed to answer %d questions with one message",
-	       qdcount);
-    return;
-  }
-  for (qu= viatcp ? ads->tcpw.head : ads->udpw.head; qu; qu= nqu) {
-    nqu= qu->next;
-    if (qu->id != id) continue;
-    if (dglen < qu->query_dglen) continue;
-    if (memcmp(qu->query_dgram+DNS_HDRSIZE,
-	       dgram+DNS_HDRSIZE,
-	       qu->query_dglen-DNS_HDRSIZE))
-      continue;
-    if (viatcp) {
-      assert(qu->state == query_tcpw);
-    } else {
-      assert(qu->state == query_tosend);
-      if (!(qu->udpsent & (1<<serv))) continue;
+
+  qu= 0;
+  /* See if we can find the relevant query, or leave qu=0 otherwise ... */   
+
+  if (qdcount == 1) {
+    for (qu= viatcp ? ads->tcpw.head : ads->udpw.head; qu; qu= nqu) {
+      nqu= qu->next;
+      if (qu->id != id) continue;
+      if (dglen < qu->query_dglen) continue;
+      if (memcmp(qu->query_dgram+DNS_HDRSIZE,
+		 dgram+DNS_HDRSIZE,
+		 qu->query_dglen-DNS_HDRSIZE))
+	continue;
+      if (viatcp) {
+	assert(qu->state == query_tcpw);
+      } else {
+	assert(qu->state == query_tosend);
+	if (!(qu->udpsent & (1<<serv))) continue;
+      }
+      break;
     }
-    break;
+    if (qu) {
+      /* We're definitely going to do something with this query now */
+      if (viatcp) LIST_UNLINK(ads->tcpw,qu);
+      else LIST_UNLINK(ads->udpw,qu);
+    }
   }
+  
+  /* If we're going to ignore the packet, we return as soon as we have
+   * failed the query (if any) and printed the warning message (if
+   * any).
+   */
+  switch (rcode) {
+  case rcode_noerror:
+  case rcode_nxdomain:
+    break;
+  case rcode_formaterror:
+    adns__warn(ads,serv,qu,"server cannot understand our query (Format Error)");
+    if (qu) adns__query_fail(qu,adns_s_rcodeformaterror);
+    return;
+  case rcode_servfail:
+    if (qu) adns__query_fail(qu,adns_s_rcodeservfail);
+    else adns__warn(ads,serv,qu,"server failure on unidentifiable query");
+    return;
+  case rcode_notimp:
+    adns__warn(ads,serv,qu,"server claims not to implement our query");
+    if (qu) adns__query_fail(qu,adns_s_rcodenotimplemented);
+    return;
+  case rcode_refused:
+    adns__warn(ads,serv,qu,"server refused our query");
+    if (qu) adns__query_fail(qu,adns_s_rcoderefused);
+    return;
+  default:
+    adns__warn(ads,serv,qu,"server gave unknown response code %d",rcode);
+    if (qu) adns__query_fail(qu,adns_s_rcodeunknown);
+    return;
+  }
+
   if (!qu) {
-    if (ads->iflags & adns_if_debug) {
+    if (!qdcount) {
+      adns__diag(ads,serv,0,"server sent reply without quoting our question");
+    } else if (qdcount>1) {
+      adns__diag(ads,serv,0,"server claimed to answer %d questions with one message",
+		 qdcount);
+    } else if (ads->iflags & adns_if_debug) {
       adns__vbuf_init(&tempvb);
       adns__debug(ads,serv,0,"reply not found, id %02x, query owner %s",
 		  id, adns__diag_domain(ads,serv,0,&tempvb,dgram,dglen,DNS_HDRSIZE));
@@ -110,37 +149,11 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     }
     return;
   }
+
+  /* We're definitely going to do something with this packet and this query now. */
+  
   anstart= qu->query_dglen;
   arstart= -1;
-
-  if (viatcp) LIST_UNLINK(ads->tcpw,qu);
-  else LIST_UNLINK(ads->udpw,qu);
-  /* We're definitely going to do something with this query now */
-  
-  switch (rcode) {
-  case rcode_noerror:
-  case rcode_nxdomain:
-    break;
-  case rcode_formaterror:
-    adns__warn(ads,serv,qu,"server cannot understand our query (Format Error)");
-    adns__query_fail(qu,adns_s_rcodeformaterror);
-    return;
-  case rcode_servfail:
-    adns__query_fail(qu,adns_s_rcodeservfail);
-    return;
-  case rcode_notimp:
-    adns__warn(ads,serv,qu,"server claims not to implement our query");
-    adns__query_fail(qu,adns_s_rcodenotimplemented);
-    return;
-  case rcode_refused:
-    adns__warn(ads,serv,qu,"server refused our query");
-    adns__query_fail(qu,adns_s_rcoderefused);
-    return;
-  default:
-    adns__warn(ads,serv,qu,"server gave unknown response code %d",rcode);
-    adns__query_fail(qu,adns_s_rcodeunknown);
-    return;
-  }
 
   /* Now, take a look at the answer section, and see if it is complete.
    * If it has any CNAMEs we stuff them in the answer.
@@ -185,7 +198,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	qu->cname_begin= rdstart;
 	qu->cname_dglen= dglen;
 	st= adns__parse_domain(ads,serv,qu, &qu->vb,
-			       qu->flags & adns_qf_quoteok_cname ? pdf_quoteok : 0,
+			       qu->flags & adns_qf_quotefail_cname ? 0 : pdf_quoteok,
 			       dgram,dglen, &rdstart,rdstart+rdlength);
 	if (!qu->vb.used) goto x_truncated;
 	if (st) { adns__query_fail(qu,st); return; }

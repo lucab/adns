@@ -74,6 +74,8 @@ static const struct optioninfo perquery_options[]= {
     "t", "type",           0,0, &of_type, "type" },
   { ot_funcarg,          "Do reverse query (address -> name lookup)",
     "i", "ptr",            0,0, &of_ptr, "addr" },
+  { ot_funcarg2,         "Lookup in in-addr-like `zone' (eg MAPS RBL)",
+    0, "reverse",          0,0, &of_reverse, "addr","zone" },
 
   { ot_desconly, "per-query binary options:" },
   { ot_flag,             "Use the search list",
@@ -192,6 +194,15 @@ static void printusage(void) {
 		 oip->desc);
 	}
 	break;
+      case ot_funcarg2:
+	assert(!oip->sopt);
+	l= (maxlopt + maxsopt - 2 -
+	    (strlen(oip->lopt) + strlen(oip->argdesc) + strlen(oip->argdesc2)));
+	  printf(" --%s <%s> <%s>%*s%s\n",
+		 oip->lopt, oip->argdesc, oip->argdesc2,
+		 l>2 ? l : 2, "",
+		 oip->desc);
+	break;
       case ot_desconly:
 	printf("%s\n", oip->desc);
 	break;
@@ -256,7 +267,7 @@ static void printusage(void) {
   if (ferror(stdout)) sysfail("write usage message",errno);
 }
 
-void of_help(const struct optioninfo *oi, const char *arg) {
+void of_help(const struct optioninfo *oi, const char *arg, const char *arg2) {
   printusage();
   if (fclose(stdout)) sysfail("finish writing output",errno);
   exit(0);
@@ -316,7 +327,8 @@ static void noninvert(const struct optioninfo *oip) {
 	   oip->lopt ? "--" : "", oip->lopt ? oip->lopt : "");
 }
 
-void opt_do(const struct optioninfo *oip, const char *arg, int invert) {
+void opt_do(const struct optioninfo *oip, int invert,
+	    const char *arg, const char *arg2) {
   switch (oip->type) {
   case ot_flag:
     assert(!arg);
@@ -327,9 +339,9 @@ void opt_do(const struct optioninfo *oip, const char *arg, int invert) {
     if (invert) noninvert(oip);
     *oip->storep= oip->value;
     return;
-  case ot_func: case ot_funcarg:
+  case ot_func: case ot_funcarg: case ot_funcarg2:
     if (invert) noninvert(oip);
-    oip->func(oip,arg);
+    oip->func(oip,arg,arg2);
     return;
   default:
     abort();

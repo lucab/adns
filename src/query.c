@@ -127,16 +127,24 @@ static void query_simple(adns_state ads, adns_query qu,
 			 const char *owner, int ol,
 			 const typeinfo *typei, adns_queryflags flags,
 			 struct timeval now) {
-  vbuf vb;
+  vbuf vb_new;
   int id;
   adns_status stat;
 
-  vb= qu->vb;
-  
-  stat= adns__mkquery(ads,&vb,&id, owner,ol, typei,flags);
-  if (stat) { adns__query_fail(qu,stat); return; }
+  stat= adns__mkquery(ads,&qu->vb,&id, owner,ol, typei,flags);
+  if (stat) {
+    if (stat == adns_s_querydomaintoolong && (flags & adns_qf_search)) {
+      adns__search_next(ads,qu,now);
+      return;
+    } else {
+      adns__query_fail(qu,stat);
+      return;
+    }
+  }
 
-  query_submit(ads,qu, typei,&vb,id, flags,now);
+  vb_new= qu->vb;
+  adns__vbuf_init(&qu->vb);
+  query_submit(ads,qu, typei,&vb_new,id, flags,now);
 }
 
 void adns__search_next(adns_state ads, adns_query qu, struct timeval now) {
@@ -259,25 +267,47 @@ int adns_submit(adns_state ads,
   return r;
 }
 
+int adns_submit_reverse_any(adns_state ads,
+			    const struct sockaddr *addr,
+			    const char *zone,
+			    adns_rrtype type,
+			    adns_queryflags flags,
+			    void *context,
+			    adns_query *query_r) {
+  const unsigned char *iaddr;
+  char *buf, *buf_free;
+  char shortbuf[100];
+  int r, lreq;
+
+  flags &= ~adns_qf_search;
+
+  if (addr->sa_family != AF_INET) return ENOSYS;
+  iaddr= (const unsigned char*) &(((const struct sockaddr_in*)addr) -> sin_addr);
+
+  lreq= strlen(zone) + 4*4 + 1;
+  if (lreq > sizeof(shortbuf)) {
+    buf= malloc(strlen(zone) + 4*4 + 1);
+    if (!buf) return errno;
+    buf_free= buf;
+  } else {
+    buf= shortbuf;
+    buf_free= 0;
+  }
+  sprintf(buf, "%d.%d.%d.%d.%s", iaddr[3], iaddr[2], iaddr[1], iaddr[0], zone);
+
+  r= adns_submit(ads,buf,type,flags,context,query_r);
+  free(buf_free);
+  return r;
+}
+
 int adns_submit_reverse(adns_state ads,
 			const struct sockaddr *addr,
 			adns_rrtype type,
 			adns_queryflags flags,
 			void *context,
 			adns_query *query_r) {
-  const unsigned char *iaddr;
-  char buf[30];
-
   if (type != adns_r_ptr && type != adns_r_ptr_raw) return EINVAL;
-  flags &= ~adns_qf_search;
-
-  if (addr->sa_family != AF_INET) return ENOSYS;
-  iaddr= (const unsigned char*) &(((const struct sockaddr_in*)addr) -> sin_addr);
-
-  sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
-	  iaddr[3], iaddr[2], iaddr[1], iaddr[0]);
-
-  return adns_submit(ads,buf,type,flags,context,query_r);
+  return adns_submit_reverse_any(ads,addr,"in-addr.arpa",type,flags,context,query_r);
 }
 
 int adns_synchronous(adns_state ads,

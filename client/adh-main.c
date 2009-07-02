@@ -62,7 +62,7 @@ char *xstrsave(const char *str) {
   return p;
 }
 
-void of_type(const struct optioninfo *oi, const char *arg) {
+void of_type(const struct optioninfo *oi, const char *arg, const char *arg2) {
   static const struct typename {
     adns_rrtype type;
     const char *desc;
@@ -106,6 +106,7 @@ static void process_optarg(const char *arg,
 			   const char *const **argv_p,
 			   const char *value) {
   const struct optioninfo *oip;
+  const char *arg2;
   int invert;
 
   if (arg[0] == '-' || arg[0] == '+') {
@@ -120,11 +121,19 @@ static void process_optarg(const char *arg,
       if (oip->type == ot_funcarg) {
 	arg= argv_p ? *++(*argv_p) : value;
 	if (!arg) usageerr("option --%s requires a value argument",oip->lopt);
+	arg2= 0;
+      } else if (oip->type == ot_funcarg2) {
+	assert(argv_p);
+	arg= *++(*argv_p);
+	if (arg) arg2= *++(*argv_p);
+	if (!arg || !arg2)
+	  usageerr("option --%s requires two more arguments", oip->lopt);
       } else {
 	if (value) usageerr("option --%s does not take a value",oip->lopt);
 	arg= 0;
+	arg2= 0;
       }
-      opt_do(oip,arg,invert);
+      opt_do(oip,invert,arg,arg2);
     } else if (arg[0] == '-' && arg[1] == 0) {
       arg= argv_p ? *++(*argv_p) : value;
       if (!arg) usageerr("option `-' must be followed by a domain");
@@ -141,11 +150,11 @@ static void process_optarg(const char *arg,
 	  } else {
 	    if (value) usageerr("two values for option -%s given !",oip->sopt);
 	  }
-	  opt_do(oip,arg,invert);
+	  opt_do(oip,invert,arg,0);
 	  arg= "";
 	} else {
 	  if (value) usageerr("option -%s does not take a value",oip->sopt);
-	  opt_do(oip,0,invert);
+	  opt_do(oip,invert,0,0);
 	}
       }
     }
