@@ -22,9 +22,6 @@
 /* Define if you have the poll function.  */
 #define HAVE_POLL 1
 
-/* Define if you have the <sys/select.h> header file.  */
-#define HAVE_SYS_SELECT_H 1
-
 /* Define if you have the nsl library (-lnsl).  */
 /* #undef HAVE_LIBNSL */
 
@@ -99,8 +96,4 @@ struct pollfd { int fd; short events; short revents; };
 
 #ifdef HAVEUSE_RPCTYPES_H
 #include <rpc/types.h>
-#endif
-
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
 #endif

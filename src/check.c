@@ -31,24 +31,26 @@ void adns_checkconsistency(adns_state ads, adns_query qu) {
   adns__consistency(ads,qu,cc_user);
 }
 
-#define DLIST_CHECK(list, nodevar, part, body)					\
-  if ((list).head) {								\
-    assert(! (list).head->part back);						\
-    for ((nodevar)= (list).head; (nodevar); (nodevar)= (nodevar)->part next) {	\
-      assert((nodevar)->part next						\
-	     ? (nodevar) == (nodevar)->part next->part back			\
-	     : (nodevar) == (list).tail);					\
-      body									\
-    }										\
+#define DLIST_CHECK(list, nodevar, part, body)			\
+  if ((list).head) {						\
+    assert(! (list).head->part back);				\
+    for ((nodevar)= (list).head;				\
+	 (nodevar);						\
+	 (nodevar)= (nodevar)->part next) {			\
+      assert((nodevar)->part next				\
+	     ? (nodevar) == (nodevar)->part next->part back	\
+	     : (nodevar) == (list).tail);			\
+      body							\
+    }								\
   }
 
-#define DLIST_ASSERTON(node, nodevar, list, part)				\
-  do {										\
-    for ((nodevar)= (list).head;						\
-	 (nodevar) != (node);							\
-	 (nodevar)= (nodevar)->part next) {					\
-      assert((nodevar));							\
-    }										\
+#define DLIST_ASSERTON(node, nodevar, list, part)	\
+  do {							\
+    for ((nodevar)= (list).head;			\
+	 (nodevar) != (node);				\
+	 (nodevar)= (nodevar)->part next) {		\
+      assert((nodevar));				\
+    }							\
   } while(0)
 
 static void checkc_query_alloc(adns_state ads, adns_query qu) {

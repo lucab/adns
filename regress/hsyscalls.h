@@ -1,5 +1,6 @@
 #ifndef HSYSCALLS_H_INCLUDED
 #define HSYSCALLS_H_INCLUDED
+#include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/uio.h>

@@ -1,7 +1,6 @@
-<html>
-<head>
-<title>adns - advanced, alternative, asynchronous resolver</title>
+<html><head><title>adns - advanced, alternative, asynchronous resolver</title>
 <link rev="made" href="mailto:adns-maint@chiark.greenend.org.uk">
+<meta name="keywords" content="adns">
 </head>
 <body>
 <h1>GNU adns</h1>
@@ -9,14 +8,14 @@
 <strong>Advanced, easy to use, asynchronous-capable DNS client
 library and utilities.</strong>
 
-<!-- Note: this file is maintained in Ian Jackson's private CVS.  -->
+<!--      Note: this file must contain portable HTML !            -->
 <!--                                                              -->
 <!--  It is served on the GNU site and also from my own system,   -->
 <!--  under the URL http://www.chiark.greenend.org.uk/adns/       -->
 <!--  Please ensure that all links continine to be correct        -->
 <!--  both for www.gnu.org and chiark.                            -->
 <!--                                                              -->
-<!--  $Id: README.html,v 1.5 2000/09/17 14:09:22 ian Exp $        -->   
+<!--  $Id: README.html,v 1.8 2003/06/29 19:06:00 ian Exp $    -->   
 
 <p>
 
@@ -92,6 +91,26 @@ usage message</A> for a summary of its capabilities.
 
 </ul>
 
+<h2>Forthcoming:</h2>
+
+I hope that future versions may also have the following features:
+
+<ul>
+
+<li>The library should be useable by threads in a multithreaded
+program in a natural way.  It should multiplex many threads' queries
+through a single query socket.
+
+<li>IPv6 support.
+
+<li>Some kind of awareness of DNSSEC.
+
+<li>Possibly some very limited caching behaviour.
+
+<li>There was, at one point, a draft native Perl interface from Tony Finch.
+
+</ul>
+
 <h2>Documentation</h2>
 
 I'm afraid there is no manual yet.  However, competent C programmers
@@ -144,11 +163,19 @@ are:
     message for adnshost</A> (currently there is no manual, sorry).
 <li>All versions released so far are also available via
     <A href="ftp://ftp.chiark.greenend.org.uk/users/ian/adns/">anonymous
-    FTP</A> and <A href="http://www.chiark.greenend.org.uk/~ian/adns/ftp/">HTTP</A>,
-<li>A mirror of my CVS repository is available via rsync from
+    FTP</A> and <A href="http://www.chiark.greenend.org.uk/~ian/adns/ftp/">HTTP</A>.
+</ul>
+
+You can also access the project CVS repositories:
+<ul>
+<li>A mirror of the source code repository is available via rsync from
     <code>rsync.chiark.greenend.org.uk::ftp/users/ian/cvs-pub/adns</code>
     (use FTP first to find your way around), or via
     <A href="http://www.chiark.greenend.org.uk/ucgi/~ijackson/cvsweb/adns/">cvsweb</A>.
+<li>This web page is maintained in
+    <A href="http://savannah.gnu.org/">Savannah</A>,
+    where you can browse the
+    <A href="http://savannah.gnu.org/cgi-bin/viewcvs/software/adns/?cvsroot=www.gnu.org">webpage CVS</A>.
 </ul>
 
 adns is also available from the
@@ -166,9 +193,14 @@ the same system or a nearby one, which must be willing to provide
 configured UN*X and GNU systems will already have such nameserver(s);
 they are usually listed in /etc/resolv.conf.
 
+<h2>References and related projects</h2>
+
+There is a <a href="http://adns.jgaa.com/">port to MS Visual Studio 6
+C++</a> by Jarle Aase.
+
 <h2>Copyright and licensing</h2>
 
-<kbd>adns</kbd> is Copyright 1997-2000 Ian Jackson, Copyright
+<kbd>adns</kbd> is Copyright 1997-2001 Ian Jackson, Copyright
 1999-2000 Tony Finch, and Copyright (C) 1991 Massachusetts Institute
 of Technology.
 
@@ -211,7 +243,7 @@ software</A> by me.
 <A href="/">site or mirror home page</A>
 <p>
 
-This web page is Copyright (C)1996-2000 Ian Jackson.  See the
+This web page is Copyright (C)1996-2001 Ian Jackson.  See the
 <A href="http://www.chiark.greenend.org.uk/~ian/sw-www-copy.html">Copyright/acknowledgements</A>.
 <p>
 

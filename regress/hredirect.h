@@ -23,16 +23,16 @@
 #define read Hread
 #undef write
 #define write Hwrite
-#undef int
+#undef writev
 #define writev Hwritev
-#undef int
+#undef gettimeofday
 #define gettimeofday Hgettimeofday
-#undef void*
+#undef malloc
 #define malloc Hmalloc
-#undef void
+#undef free
 #define free Hfree
-#undef void*
+#undef realloc
 #define realloc Hrealloc
-#undef void
+#undef exit
 #define exit Hexit
 #endif

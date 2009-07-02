@@ -113,7 +113,6 @@ DPKG_CACHED_TRY_COMPILE(inlines,dpkg_cv_c_inline,,
  AC_MSG_RESULT(no))
 
 ADNS_C_GCCATTRIB
-AC_CHECK_HEADERS(sys/select.h)
 
 AC_SUBST(WARNS)
 

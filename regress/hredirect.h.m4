@@ -33,7 +33,7 @@ m4_include(hmacros.i4)
 hm_create_nothing
 m4_define(`hm_syscall', `#undef $1
 #define $1 H$1')
-m4_define(`hm_specsyscall',`#undef $1
+m4_define(`hm_specsyscall',`#undef $2
 #define $2 H$2')
 m4_include(`hsyscalls.i4')
 

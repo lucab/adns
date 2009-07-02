@@ -114,7 +114,3 @@ struct pollfd { int fd; short events; short revents; };
 #ifdef HAVEUSE_RPCTYPES_H
 #include <rpc/types.h>
 #endif
-
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#endif

@@ -44,7 +44,8 @@ void adns__vdiag(adns_state ads, const char *pfx, adns_initflags prevent,
   vbuf vb;
   
   if (!ads->diagfile ||
-      (!(ads->iflags & adns_if_debug) && (!prevent || (ads->iflags & prevent))))
+      (!(ads->iflags & adns_if_debug)
+       && (!prevent || (ads->iflags & prevent))))
     return;
 
   if (ads->iflags & adns_if_logpid) {
@@ -79,7 +80,8 @@ void adns__vdiag(adns_state ads, const char *pfx, adns_initflags prevent,
   fputs(aft,ads->diagfile);
 }
 
-void adns__debug(adns_state ads, int serv, adns_query qu, const char *fmt, ...) {
+void adns__debug(adns_state ads, int serv, adns_query qu,
+		 const char *fmt, ...) {
   va_list al;
 
   va_start(al,fmt);
@@ -87,15 +89,18 @@ void adns__debug(adns_state ads, int serv, adns_query qu, const char *fmt, ...) 
   va_end(al);
 }
 
-void adns__warn(adns_state ads, int serv, adns_query qu, const char *fmt, ...) {
+void adns__warn(adns_state ads, int serv, adns_query qu,
+		const char *fmt, ...) {
   va_list al;
 
   va_start(al,fmt);
-  adns__vdiag(ads," warning",adns_if_noerrprint|adns_if_noserverwarn,serv,qu,fmt,al);
+  adns__vdiag(ads," warning",
+	      adns_if_noerrprint|adns_if_noserverwarn, serv,qu,fmt,al);
   va_end(al);
 }
 
-void adns__diag(adns_state ads, int serv, adns_query qu, const char *fmt, ...) {
+void adns__diag(adns_state ads, int serv, adns_query qu,
+		const char *fmt, ...) {
   va_list al;
 
   va_start(al,fmt);
@@ -156,10 +161,12 @@ void adns__vbuf_free(vbuf *vb) {
 /* Additional diagnostic functions */
 
 const char *adns__diag_domain(adns_state ads, int serv, adns_query qu,
-			      vbuf *vb, const byte *dgram, int dglen, int cbyte) {
+			      vbuf *vb, const byte *dgram,
+			      int dglen, int cbyte) {
   adns_status st;
 
-  st= adns__parse_domain(ads,serv,qu,vb, pdf_quoteok, dgram,dglen,&cbyte,dglen);
+  st= adns__parse_domain(ads,serv,qu,vb, pdf_quoteok,
+			 dgram,dglen,&cbyte,dglen);
   if (st == adns_s_nomemory) {
     return "<cannot report domain... out of memory>";
   }
@@ -218,36 +225,36 @@ static const struct sinfo {
   const char *abbrev;
   const char *string;
 } sinfos[]= {
-  SINFO(  ok,                  "OK"                                            ),
-
-  SINFO(  nomemory,            "Out of memory"                                 ),
-  SINFO(  unknownrrtype,       "Query not implemented in DNS library"          ),
-  SINFO(  systemfail,          "General resolver or system failure"            ),
-
-  SINFO(  timeout,             "DNS query timed out"                           ),
-  SINFO(  allservfail,         "All nameservers failed"                        ),
-  SINFO(  norecurse,           "Recursion denied by nameserver"                ),
-  SINFO(  invalidresponse,     "Nameserver sent bad response"                  ),
-  SINFO(  unknownformat,       "Nameserver used unknown format"                ),
-
-  SINFO(  rcodeservfail,       "Nameserver reports failure"                    ),
-  SINFO(  rcodeformaterror,    "Query not understood by nameserver"            ),
-  SINFO(  rcodenotimplemented, "Query not implemented by nameserver"           ),
-  SINFO(  rcoderefused,        "Query refused by nameserver"                   ),
-  SINFO(  rcodeunknown,        "Nameserver sent unknown response code"         ),
-  
-  SINFO(  inconsistent,        "Inconsistent resource records in DNS"          ),
-  SINFO(  prohibitedcname,     "DNS alias found where canonical name wanted"   ),
-  SINFO(  answerdomaininvalid, "Found syntactically invalid domain name"       ),
-  SINFO(  answerdomaintoolong, "Found overly-long domain name"                 ),
-  SINFO(  invaliddata,         "Found invalid DNS data"                        ),
-
-  SINFO(  querydomainwrong,    "Domain invalid for particular DNS query type"  ),
-  SINFO(  querydomaininvalid,  "Domain name is syntactically invalid"          ),
-  SINFO(  querydomaintoolong,  "Domain name or component is too long"          ),
-
-  SINFO(  nxdomain,            "No such domain"                                ),
-  SINFO(  nodata,              "No such data"                                  )
+  SINFO( ok,                  "OK"                                           ),
+									      
+  SINFO( nomemory,            "Out of memory"                                ),
+  SINFO( unknownrrtype,       "Query not implemented in DNS library"         ),
+  SINFO( systemfail,          "General resolver or system failure"           ),
+									      
+  SINFO( timeout,             "DNS query timed out"                          ),
+  SINFO( allservfail,         "All nameservers failed"                       ),
+  SINFO( norecurse,           "Recursion denied by nameserver"               ),
+  SINFO( invalidresponse,     "Nameserver sent bad response"                 ),
+  SINFO( unknownformat,       "Nameserver used unknown format"               ),
+									      
+  SINFO( rcodeservfail,       "Nameserver reports failure"                   ),
+  SINFO( rcodeformaterror,    "Query not understood by nameserver"           ),
+  SINFO( rcodenotimplemented, "Query not implemented by nameserver"          ),
+  SINFO( rcoderefused,        "Query refused by nameserver"                  ),
+  SINFO( rcodeunknown,        "Nameserver sent unknown response code"        ),
+  									      
+  SINFO( inconsistent,        "Inconsistent resource records in DNS"         ),
+  SINFO( prohibitedcname,     "DNS alias found where canonical name wanted"  ),
+  SINFO( answerdomaininvalid, "Found syntactically invalid domain name"      ),
+  SINFO( answerdomaintoolong, "Found overly-long domain name"                ),
+  SINFO( invaliddata,         "Found invalid DNS data"                       ),
+									      
+  SINFO( querydomainwrong,    "Domain invalid for particular DNS query type" ),
+  SINFO( querydomaininvalid,  "Domain name is syntactically invalid"         ),
+  SINFO( querydomaintoolong,  "Domain name or component is too long"         ),
+									      
+  SINFO( nxdomain,            "No such domain"                               ),
+  SINFO( nodata,              "No such data"                                 )
 };
 
 static int si_compar(const void *key, const void *elem) {
@@ -258,7 +265,8 @@ static int si_compar(const void *key, const void *elem) {
 }
 
 static const struct sinfo *findsinfo(adns_status st) {
-  return bsearch(&st,sinfos,sizeof(sinfos)/sizeof(*sinfos),sizeof(*sinfos),si_compar);
+  return bsearch(&st,sinfos, sizeof(sinfos)/sizeof(*sinfos),
+		 sizeof(*sinfos), si_compar);
 }
 
 const char *adns_strerror(adns_status st) {
@@ -307,7 +315,8 @@ static int sti_compar(const void *key, const void *elem) {
 const char *adns_errtypeabbrev(adns_status st) {
   const struct stinfo *sti;
 
-  sti= bsearch(&st,stinfos,sizeof(stinfos)/sizeof(*stinfos),sizeof(*stinfos),sti_compar);
+  sti= bsearch(&st,stinfos, sizeof(stinfos)/sizeof(*stinfos),
+	       sizeof(*stinfos), sti_compar);
   return sti->abbrev;
 }
 

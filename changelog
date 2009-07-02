@@ -1,3 +1,27 @@
+adns (1.1); urgency=medium
+
+  Major bugfixes:
+  * Do not spin if connect() fails immediately (!)
+  * Stop searching on a CNAME (even if it's broken).
+  * When search list runs out, _qf_owner sets owner to query domain.
+  * Fix bogus multiple updates to p in transmit.c (!)
+
+  Portability improvements:
+  * Fix up spurious #undef's in hredirect.h.
+  * Don't use <sys/select.h> any more, it was a mistake made in pre-1.0
+    (and there doesn't seem to be much explanation why).
+  * Understand and sort of check OpenBSD `lookup' resolv.conf directive.
+  * #include <stdlib.h> in internal.h (for abort etc).
+  * Always #include <sys/types.h> before <sys/socket.h> (for FreeBSD 4.6).
+
+  Cosmetic and documentation improvements:
+  * Added wishlist entry re configurable port no.
+  * Problem with SERVFAIL in TODO.
+  * README.html: mentioned Jarle Aase's Windows port, and other fixes.
+  * Some better source code formatting/wrapping.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Tue,  1 Jul 2003 22:55:29 +0100
+
 adns (1.0); urgency=medium
 
   Bugfixes:

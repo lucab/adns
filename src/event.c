@@ -83,6 +83,21 @@ static void tcp_connected(adns_state ads, struct timeval now) {
   }
 }
 
+static void tcp_broken_events(adns_state ads) {
+  adns_query qu, nqu;
+  
+  assert(ads->tcpstate == server_broken);
+  for (qu= ads->tcpw.head; qu; qu= nqu) {
+    nqu= qu->next;
+    assert(qu->state == query_tcpw);
+    if (qu->retries > ads->nservers) {
+      LIST_UNLINK(ads->tcpw,qu);
+      adns__query_fail(qu,adns_s_allservfail);
+    }
+  }
+  ads->tcpstate= server_disconnected;
+}
+
 void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
   int r, fd, tries;
   struct sockaddr_in addr;
@@ -105,7 +120,10 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
     assert(!ads->tcprecv_skip);
 
     proto= getprotobyname("tcp");
-    if (!proto) { adns__diag(ads,-1,0,"unable to find protocol no. for TCP !"); return; }
+    if (!proto) {
+      adns__diag(ads,-1,0,"unable to find protocol no. for TCP !");
+      return;
+    }
     fd= socket(AF_INET,SOCK_STREAM,proto->p_proto);
     if (fd<0) {
       adns__diag(ads,-1,0,"cannot create TCP socket: %s",strerror(errno));
@@ -113,7 +131,8 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
     }
     r= adns__setnonblock(ads,fd);
     if (r) {
-      adns__diag(ads,-1,0,"cannot make TCP socket nonblocking: %s",strerror(r));
+      adns__diag(ads,-1,0,"cannot make TCP socket nonblocking:"
+		 " %s",strerror(r));
       close(fd);
       return;
     }
@@ -131,7 +150,7 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
       return;
     }
     adns__tcp_broken(ads,"connect",strerror(errno));
-    ads->tcpstate= server_disconnected;
+    tcp_broken_events(ads);
   }
 }
 
@@ -218,21 +237,11 @@ static void timeouts_queue(adns_state ads, int act,
 static void tcp_events(adns_state ads, int act,
 		       struct timeval **tv_io, struct timeval *tvbuf,
 		       struct timeval now) {
-  adns_query qu, nqu;
-  
   for (;;) {
     switch (ads->tcpstate) {
     case server_broken:
       if (!act) { inter_immed(tv_io,tvbuf); return; }
-      for (qu= ads->tcpw.head; qu; qu= nqu) {
-	nqu= qu->next;
-	assert(qu->state == query_tcpw);
-	if (qu->retries > ads->nservers) {
-	  LIST_UNLINK(ads->tcpw,qu);
-	  adns__query_fail(qu,adns_s_allservfail);
-	}
-      }
-      ads->tcpstate= server_disconnected;
+      tcp_broken_events(ads);
     case server_disconnected: /* fall through */
       if (!ads->tcpw.head) return;
       if (!act) { inter_immed(tv_io,tvbuf); return; }
@@ -317,7 +326,8 @@ int adns__pollfds(adns_state ads, struct pollfd pollfds_buf[MAX_POLLFDS]) {
     pollfds_buf[1].events= POLLOUT;
     break;
   case server_ok:
-    pollfds_buf[1].events= ads->tcpsend.used ? POLLIN|POLLOUT|POLLPRI : POLLIN|POLLPRI;
+    pollfds_buf[1].events=
+      ads->tcpsend.used ? POLLIN|POLLOUT|POLLPRI : POLLIN|POLLPRI;
     break;
   default:
     abort();
@@ -358,7 +368,8 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
 	want= 2;
       }
       ads->tcprecv.used -= ads->tcprecv_skip;
-      memmove(ads->tcprecv.buf,ads->tcprecv.buf+ads->tcprecv_skip,ads->tcprecv.used);
+      memmove(ads->tcprecv.buf, ads->tcprecv.buf+ads->tcprecv_skip,
+	      ads->tcprecv.used);
       ads->tcprecv_skip= 0;
       if (!adns__vbuf_ensure(&ads->tcprecv,want)) { r= ENOMEM; goto xit; }
       assert(ads->tcprecv.used <= ads->tcprecv.avail);
@@ -405,8 +416,8 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
 	continue;
       }
       if (ntohs(udpaddr.sin_port) != DNS_PORT) {
-	adns__diag(ads,-1,0,"datagram received from wrong port %u (expected %u)",
-		   ntohs(udpaddr.sin_port),DNS_PORT);
+	adns__diag(ads,-1,0,"datagram received from wrong port"
+		   " %u (expected %u)", ntohs(udpaddr.sin_port),DNS_PORT);
 	continue;
       }
       for (serv= 0;
@@ -484,7 +495,8 @@ xit:
   return r;
 }
   
-int adns_processexceptional(adns_state ads, int fd, const struct timeval *now) {
+int adns_processexceptional(adns_state ads, int fd,
+			    const struct timeval *now) {
   adns__consistency(ads,0,cc_entex);
   switch (ads->tcpstate) {
   case server_disconnected:
@@ -505,7 +517,8 @@ int adns_processexceptional(adns_state ads, int fd, const struct timeval *now) {
 static void fd_event(adns_state ads, int fd,
 		     int revent, int pollflag,
 		     int maxfd, const fd_set *fds,
-		     int (*func)(adns_state, int fd, const struct timeval *now),
+		     int (*func)(adns_state, int fd,
+				 const struct timeval *now),
 		     struct timeval now, int *r_r) {
   int r;
   
@@ -516,7 +529,8 @@ static void fd_event(adns_state ads, int fd,
     if (r_r) {
       *r_r= r;
     } else {
-      adns__diag(ads,-1,0,"process fd failed after select: %s",strerror(errno));
+      adns__diag(ads,-1,0,"process fd failed after select:"
+		 " %s",strerror(errno));
       adns_globalsystemfailure(ads);
     }
   }
@@ -533,9 +547,12 @@ void adns__fdevents(adns_state ads,
     fd= pollfds[i].fd;
     if (fd >= maxfd) maxfd= fd+1;
     revents= pollfds[i].revents;
-    fd_event(ads,fd, revents,POLLIN, maxfd,readfds, adns_processreadable,now,r_r);
-    fd_event(ads,fd, revents,POLLOUT, maxfd,writefds, adns_processwriteable,now,r_r);
-    fd_event(ads,fd, revents,POLLPRI, maxfd,exceptfds, adns_processexceptional,now,r_r);
+#define EV(pollfl,fds,how)  \
+    fd_event(ads,fd, revents,pollfl, maxfd,fds, adns_process##how,now,r_r)
+    EV( POLLIN,  readfds,   readable    );
+    EV( POLLOUT, writefds,  writeable   );
+    EV( POLLPRI, exceptfds, exceptional );
+#undef EV
   }
 }
 

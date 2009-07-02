@@ -29,6 +29,7 @@ const struct Terrno Terrnos[]= {
   { "ECONNRESET",                ECONNRESET                   },
   { "ECONNREFUSED",              ECONNREFUSED                 },
   { "EPIPE",                     EPIPE                        },
+  { "ENOTSOCK",                  ENOTSOCK                     },
   {  0,                          0                            }
 };
 static vbuf vbw;

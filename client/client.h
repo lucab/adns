@@ -28,7 +28,7 @@
 #ifndef CLIENT_H_INCLUDED
 #define CLIENT_H_INCLUDED
 
-#define ADNS_VERSION_STRING "1.0"
+#define ADNS_VERSION_STRING "1.1"
 
 #define COPYRIGHT_MESSAGE \
  "Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>\n" \
