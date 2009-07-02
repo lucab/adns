@@ -1,3 +1,14 @@
+adns (1.4); urgency=low
+
+  Improvements for multithreaded programs:
+  * New documentation comment in adns.h explaining thread guarantees
+    (or lack of them), replaces `single-threaded' note at the top.
+  * Fix string conversion of adns_r_addr not to use a static buffer
+    (function csp_addr) so as to make thread promise true.
+  * Make an internal variable const-correct (expectdomain in pa_ptr).
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Tue, 17 Oct 2006 17:05:08 +0100
+
 adns (1.3); urgency=low
 
   Portability fixes:
