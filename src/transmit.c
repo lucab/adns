@@ -251,6 +251,7 @@ static void query_usetcp(adns_query qu, struct timeval now) {
 
 void adns__query_send(adns_query qu, struct timeval now) {
   struct sockaddr_in servaddr;
+  struct sockaddr_in6 servaddr6;
   int serv, r;
   adns_state ads;
 
@@ -266,15 +267,25 @@ void adns__query_send(adns_query qu, struct timeval now) {
   }
 
   serv= qu->udpnextserver;
-  memset(&servaddr,0,sizeof(servaddr));
-
   ads= qu->ads;
-  servaddr.sin_family= AF_INET;
-  servaddr.sin_addr= ads->servers[serv].addr;
-  servaddr.sin_port= htons(DNS_PORT);
+
+  if(ads->servers[serv].sin_family == AF_INET) {
+    memset(&servaddr,0,sizeof(servaddr));
+    servaddr.sin_family= ads->servers[serv].sin_family;
+    servaddr.sin_addr= ads->servers[serv].addr;
+    servaddr.sin_port= htons(DNS_PORT);
+    r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
+		(const struct sockaddr*)&servaddr,sizeof(servaddr));
+  } else {
+    memset(&servaddr6,0,sizeof(servaddr6));
+    servaddr6.sin6_family= ads->servers[serv].sin_family;
+    servaddr6.sin6_addr= ads->servers[serv].addr6;
+    servaddr6.sin6_port= htons(DNS_PORT);
+    r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
+		(const struct sockaddr*)&servaddr6,sizeof(servaddr6));
+  }
+
   
-  r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
-	    (const struct sockaddr*)&servaddr,sizeof(servaddr));
   if (r<0 && errno == EMSGSIZE) {
     qu->retries= 0;
     query_usetcp(qu,now);
