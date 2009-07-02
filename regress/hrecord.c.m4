@@ -2,12 +2,11 @@ m4_dnl hrecord.c.m4
 m4_dnl (part of complex test harness, not of the library)
 m4_dnl - recording routines
 
-m4_dnl  This file is
-m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-m4_dnl
-m4_dnl  It is part of adns, which is
-m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-m4_dnl    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+m4_dnl  This file is part of adns, which is
+m4_dnl    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+m4_dnl    Copyright (C) 1999-2000,2003,2006  Tony Finch
+m4_dnl    Copyright (C) 1991 Massachusetts Institute of Technology
+m4_dnl  (See the file INSTALL for full details.)
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
 m4_dnl  it under the terms of the GNU General Public License as published by
@@ -45,7 +44,7 @@ static void R_recordtime(void) {
   int r;
   struct timeval tv, tvrel;
 
-  Tensureoutputfile();
+  Tensurerecordfile();
   r= gettimeofday(&tv,0); if (r) Tfailed("gettimeofday syscallbegin");
   tvrel.tv_sec= tv.tv_sec - currenttime.tv_sec;
   tvrel.tv_usec= tv.tv_usec - currenttime.tv_usec;
@@ -54,7 +53,7 @@ static void R_recordtime(void) {
   currenttime= tv;
 }
 
-void Tensureoutputfile(void) {
+void Tensurerecordfile(void) {
   const char *fdstr;
   int fd, r;
 
@@ -74,7 +73,7 @@ void Tensureoutputfile(void) {
 
 void Q_vb(void) {
   if (!adns__vbuf_append(&vb,"",1)) Tnomem();
-  Tensureoutputfile();
+  Tensurerecordfile();
   if (fprintf(Toutputfile," %s\n",vb.buf) == EOF) Toutputerr();
   if (fflush(Toutputfile)) Toutputerr();
 }

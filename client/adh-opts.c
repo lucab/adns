@@ -4,12 +4,11 @@
  *   option handling tables etc.
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -263,9 +262,10 @@ static void printusage(void) {
 	" 11   usage problems\n"
 	"\n"
 	"Query types (see adns.h; default is addr):\n"
-	"  ns  soa  ptr  mx  rp  addr       - enhanced versions\n"
-	"  cname  hinfo  txt                - types with only one version\n"
-	"  a  ns-  soa-  ptr-  mx-  rp-     - _raw versions\n"
+	"  ns  soa  ptr  mx  rp  srv  addr       - enhanced versions\n"
+	"  cname  hinfo  txt                     - types with only one version\n"
+	"  a  ns-  soa-  ptr-  mx-  rp-  srv-    - _raw versions\n"
+	"  type<number>                          - `unknown' type, RFC3597\n"
 	"Default is addr, or ptr for -i/--ptr queries\n",
 	stdout);
   if (ferror(stdout)) sysfail("write usage message",errno);

@@ -4,12 +4,11 @@
  * - management of global state
  */
 /*
- *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -77,14 +76,14 @@ static void configparseerr(adns_state ads, const char *fn, int lno,
   va_list al;
 
   saveerr(ads,EINVAL);
-  if (!ads->diagfile || (ads->iflags & adns_if_noerrprint)) return;
+  if (!ads->logfn || (ads->iflags & adns_if_noerrprint)) return;
 
-  if (lno==-1) fprintf(ads->diagfile,"adns: %s: ",fn);
-  else fprintf(ads->diagfile,"adns: %s:%d: ",fn,lno);
+  if (lno==-1) adns__lprintf(ads,"adns: %s: ",fn);
+  else adns__lprintf(ads,"adns: %s:%d: ",fn,lno);
   va_start(al,fmt);
-  vfprintf(ads->diagfile,fmt,al);
+  adns__vlprintf(ads,fmt,al);
   va_end(al);
-  fputc('\n',ads->diagfile);
+  adns__lprintf(ads,"\n");
 }
 
 static int nextword(const char **bufp_io, const char **word_r, int *l_r) {
@@ -416,7 +415,7 @@ static void readconfiggeneric(adns_state ads, const char *filename,
     linebuf[l]= 0;
     p= linebuf;
     while (ctype_whitespace(*p)) p++;
-    if (*p == '#' || !*p) continue;
+    if (*p == '#' || *p == ';' || !*p) continue;
     q= p;
     while (*q && !ctype_whitespace(*q)) q++;
     dirl= q-p;
@@ -426,7 +425,7 @@ static void readconfiggeneric(adns_state ads, const char *filename,
 	 ccip++);
     if (!ccip->name) {
       adns__diag(ads,-1,0,"%s:%d: unknown configuration directive `%.*s'",
-		 filename,lno,q-p,p);
+		 filename,lno,(int)(q-p),p);
       continue;
     }
     while (ctype_whitespace(*q)) q++;
@@ -507,13 +506,15 @@ int adns__setnonblock(adns_state ads, int fd) {
 }
 
 static int init_begin(adns_state *ads_r, adns_initflags flags,
-		      FILE *diagfile) {
+		      adns_logcallbackfn *logfn, void *logfndata) {
   adns_state ads;
+  pid_t pid;
   
   ads= malloc(sizeof(*ads)); if (!ads) return errno;
 
   ads->iflags= flags;
-  ads->diagfile= diagfile;
+  ads->logfn= logfn;
+  ads->logfndata= logfndata;
   ads->configerrno= 0;
   LIST_INIT(ads->udpw);
   LIST_INIT(ads->tcpw);
@@ -531,6 +532,11 @@ static int init_begin(adns_state *ads_r, adns_initflags flags,
   timerclear(&ads->tcptimeout);
   ads->searchlist= 0;
 
+  pid= getpid();
+  ads->rand48xsubi[0]= pid;
+  ads->rand48xsubi[1]= (unsigned long)pid >> 16;
+  ads->rand48xsubi[2]= pid ^ ((unsigned long)pid >> 16);
+
   *ads_r= ads;
   return 0;
 }
@@ -541,8 +547,8 @@ static int init_finish(adns_state ads) {
   int r;
   
   if (!ads->nservers) {
-    if (ads->diagfile && ads->iflags & adns_if_debug)
-      fprintf(ads->diagfile,"adns: no nameservers, using localhost\n");
+    if (ads->logfn && ads->iflags & adns_if_debug)
+      adns__lprintf(ads,"adns: no nameservers, using localhost\n");
     ia.s_addr= htonl(INADDR_LOOPBACK);
     addserver(ads,ia);
   }
@@ -571,12 +577,18 @@ static void init_abort(adns_state ads) {
   free(ads);
 }
 
-int adns_init(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
+static void logfn_file(adns_state ads, void *logfndata,
+		       const char *fmt, va_list al) {
+  vfprintf(logfndata,fmt,al);
+}
+
+static int init_files(adns_state *ads_r, adns_initflags flags,
+		      adns_logcallbackfn *logfn, void *logfndata) {
   adns_state ads;
   const char *res_options, *adns_res_options;
   int r;
   
-  r= init_begin(&ads, flags, diagfile ? diagfile : stderr);
+  r= init_begin(&ads, flags, logfn, logfndata);
   if (r) return r;
   
   res_options= instrum_getenv(ads,"RES_OPTIONS");
@@ -612,12 +624,18 @@ int adns_init(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
   return 0;
 }
 
-int adns_init_strcfg(adns_state *ads_r, adns_initflags flags,
-		     FILE *diagfile, const char *configtext) {
+int adns_init(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
+  return init_files(ads_r, flags, logfn_file, diagfile ? diagfile : stderr);
+}
+
+static int init_strcfg(adns_state *ads_r, adns_initflags flags,
+		       adns_logcallbackfn *logfn, void *logfndata,
+		       const char *configtext) {
   adns_state ads;
   int r;
 
-  r= init_begin(&ads, flags, diagfile);  if (r) return r;
+  r= init_begin(&ads, flags, logfn, logfndata);
+  if (r) return r;
 
   readconfigtext(ads,configtext,"<supplied configuration text>");
   if (ads->configerrno) {
@@ -632,6 +650,24 @@ int adns_init_strcfg(adns_state *ads_r, adns_initflags flags,
   return 0;
 }
 
+int adns_init_strcfg(adns_state *ads_r, adns_initflags flags,
+		     FILE *diagfile, const char *configtext) {
+  return init_strcfg(ads_r, flags,
+		     diagfile ? logfn_file : 0, diagfile,
+		     configtext);
+}
+
+int adns_init_logfn(adns_state *newstate_r, adns_initflags flags,
+		    const char *configtext /*0=>use default config files*/,
+		    adns_logcallbackfn *logfn /*0=>logfndata is a FILE* */,
+		    void *logfndata /*0 with logfn==0 => discard*/) {
+  if (!logfn && logfndata)
+    logfn= logfn_file;
+  if (configtext)
+    return init_strcfg(newstate_r, flags, logfn, logfndata, configtext);
+  else
+    return init_files(newstate_r, flags, logfn, logfndata);
+}
 
 void adns_finish(adns_state ads) {
   adns__consistency(ads,0,cc_entex);

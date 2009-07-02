@@ -1,0 +1,45 @@
+		LICENCE WAIVERS FOR ADNS
+		========================
+
+See GPL-vs-LGPL, section 2.  This file contains reproductions of
+waivers I have granted to allow adns to be mixed with certain other
+programs whose licenses are not GPL compatible.
+
+
+IMPORTANT NOTES
+---------------
+
+ * Not all of the code in adns was written by me.  The programs
+   `fanftest', `adnslogres' and `adnsheloex' are (partially) copyright
+   Tony Finch and to that extent are not covered by the waivers.  I
+   believe - but do not warrant - that the rest of adns is (at the
+   time of writing, 19th of November 2005) entirely mine, but please
+   check the copyright notices on the individual files.
+
+ * These waivers apply only in the specified circumstances.
+
+ * The waivers listed in this file LICENCE.WAIVERS in a particular
+   version of adns also apply to versions of adns released previously
+   to the one with the LICENCE.WAIVERS file.  But they do not
+   necessarily apply to future versions of adns.
+
+    - iwj, 19th November 2005
+
+
+Affero GPL
+----------
+
+   When adns is combined with
+     Infomine (http://infomine.ucr.edu)
+   or a work derived from it, I am happy for you to treat adns as if
+   it were licenced to you (and all third parties) under the GNU GPL
+   v2 with additionally the clause 2d from the Affero General Public
+   Licence version 1 (as published today at
+   http://www.gnu.org/licenses/agpl.html).
+
+    - iwj, 2nd March 2004
+
+
+Local variables:
+mode: text
+End: 

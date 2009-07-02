@@ -8,37 +8,34 @@ questions.  If you still have questions or comments, please mail me at
 <adns-maint@chiark.greenend.org.uk>.
 
 Typically there are two or three kinds of situation where people make
-this request: the first is where someone is developing a proprietary
-program and wishes to make use of adns but doesn't wish to make their
-program free software.  The second case is where a free software
-project is currently using an MIT-like licence or the LGPL and fear
-`GPL infection'.  The third case, which often overlaps with the
-second, is where another free software project currently using a
-GPL-incompatible licence, wishes to use adns.
+this request: the first is where another free software project
+currently using a GPL-incompatible licence, wishes to use adns.  The
+second case, which often overlaps with the first, is where a free
+software project is currently using an MIT-like licence or the LGPL
+and fear `GPL infection'.  The third case is where someone is
+developing a proprietary program and wishes to make use of adns but
+doesn't wish to make their program free software
 
 
-1. Proprietary applications of adns
------------------------------------
+1. GPL-incompatible free software licences
+------------------------------------------
 
-So, let me get this straight.  You're writing a proprietary
-program, by which I mean that you will not be distributing source code
-and not allowing users to modify and share your software; most likely
-you are doing this for your own (personal or corporate) financial
-gain.
+Regrettably, there are a number of free software licences (and
+semi-free licences) in existence which are not compatible with the
+GPL.  That is, they impose restrictions which are not present in the
+GPL, and therefore distributing a whole work which contains both such
+a program and a GPL'd program is not possible: either the combination
+would have to be distributed under the GPL (violating the restrictions
+made by the original author), or under the GPL-incompatible licence
+(violating the GPL).
 
-However, you want to take advantage of adns, software which I have
-spent my time and effort on, and which I release as free software so
-that everyone can improve, share and use it.
+I may be prepared to make exceptions for such a licence.  Please
+contact me at <adns-maint@chiark.greenend.org.uk> with the full text
+of the GPL-incompatible licence.  However, I would usually prefer it
+if you could use a GPL-compatible licence for your project instead.
 
-Don't you think that is a little hypocritical ?  I'm sorry, but I
-don't want you to just take my nice convenient software, without
-giving something back to the free software community or giving the
-same rights to your users as I do to you.
-
-If you really aren't the nasty kind of person I've described here, for
-example if you have a good reason other than your own selfishness for
-wanting to restrict distribution of your program, then perhaps you
-should contact me to discuss it.
+I have already issued some waivers for certain projects.  These are
+reproduced in LICENCE.WAIVERS.
 
 
 2. GPL-avoiding projects (MIT licence, et al)
@@ -96,25 +93,30 @@ free software licensing, visit:
   at http://www.fsf.org/philosophy/why-not-lgpl.html
 
 
-3. GPL-incompatible free software licences
-------------------------------------------
+3. Proprietary applications of adns
+-----------------------------------
 
-Regrettably, there are a number of free software licences (and
-semi-free licences) in existence which are not compatible with the
-GPL.  That is, they impose restrictions which are not present in the
-GPL, and therefore distributing a whole work which contains both such
-a program and a GPL'd program is not possible: either the combination
-would have to be distributed under the GPL (violating the restrictions
-made by the original author), or under the GPL-incompatible licence
-(violating the GPL).
+This applies to you if you are writing a proprietary program, by which
+I mean that you will not be distributing source code and not allowing
+users to modify and share your software; most likely you are doing
+this for your own (personal or corporate) financial gain.
 
-I may be prepared to make exceptions for such a licence.  Please
-contact me at <adns-maint@chiark.greenend.org.uk> with the full text
-of the GPL-incompatible licence.  However, I would usually prefer it
-if you could use a GPL-compatible licence for your project instead.
+In this case the copyleft GPL licence does not meet your needs.
+Instead, you will need to negotiate a separate proprietary licence for
+adns.
+
+The List Price for a proprietary but LGPL-compatible application which
+uses adns is EUR150,000 per program per 10,000 users or part thereof,
+of which I will donate 25% to a Free Software organisation of my
+choice (as recognition for the contributions and help I have received
+from the Free Software communicy).
+
+Discounts may be available, particularly if I approve of your product.
+So, if you are serious about proprietary software, and paying for the
+software that you use, please contact me to negotiate a good deal.
 
 
--- Ian Jackson 17.9.2000
+-- Ian Jackson 22.5.2004
 
 
 Local variables:

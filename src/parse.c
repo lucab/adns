@@ -3,12 +3,11 @@
  * - parsing assistance functions (mainly for domains inside datagrams)
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -113,7 +112,7 @@ adns_status adns__findlabel_next(findlabel_state *fls,
 }
 
 adns_status adns__parse_domain(adns_state ads, int serv, adns_query qu,
-			       vbuf *vb, adns_queryflags flags,
+			       vbuf *vb, parsedomain_flags flags,
 			       const byte *dgram, int dglen, int *cbyte_io,
 			       int max) {
   findlabel_state fls;

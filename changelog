@@ -1,3 +1,51 @@
+adns (1.2); urgency=medium
+
+  New features:
+  * Support for SRV RRs.
+  * Support for unknown RR types (according to RFC3597) via adns_r_unknown.
+  * Allow `;'-comments in resolv.conf (report from Colin Charles).    
+  * New adnsheloex client courtesy of Tony Finch.
+  * New adns_init_logfn etc. for having logging use a callback function.
+
+  Bugfixes:
+  * Fix error in prototype in definition of adns__parse_domain.
+  * Add missing ENOTSOCK to hcommon.c.m4 (was already in hcommon.c!)
+
+  Portability fixes prompted by Bernd Eckenfels, the Debian maintainer:
+  * Correct type of various printf arguments: ptrdiff_t != int.
+  * Do not print size of leaked blocks of memory (this causes
+    a spurious regression test failure on some platforms).
+  * Provide adns_if_none and adns_qf_none (which will help with compilers
+    which complain about plain `0' being passed where an enum is wanted).
+  * adnstest converts some errno values to EFOOBAR: all of the ones
+    mentioned in adns.h, at least.  This makes the regression test
+    more portable (fixes problem noticed by Bernd Eckenfels).
+  * Add -Wno-pointer-sign if GCC has that option.
+
+  Documentation improvements:
+  * Add documentation comment by definition of adns_r_ptr_raw type enum.
+  * Document in adns.h EINVAL from adns_init meaning bad configuration.
+  * Include several new references to related programs to README.html.
+  * Redacted the TODO list.
+  * New LICENCE.WAIVERS file for GPL-incompatility workarounds.
+  * Clarified GPL-vs-LGPL: a bit less hostile and a bit more mercenary.
+  * Copyright notices updated.
+
+  Packaging changes:
+  * Update MINOR to 2 and DISTVERSION and ADNS_VERSION_STRING to 1.2.
+  * Reran autoconf/autoheader (autoconf Debian 2.13-54).
+  * Create $(bin_dir) and $(lib_dir) on `make install', and also
+    make a libadns.so.1 -> libadns.so.1.<minor> link.  (Suggestions
+    and patch from Nix of esperi.org.uk.)
+  * Add .PHONY: install to Makefile, to help people with demented fs's.
+  * Darwin listed in INSTALL.
+
+  Minor test harness improvements:
+  * Hgettimeofday calls Tensurerecordfile (was Tensureinput/outputfile).
+  * Add bind(2) and listen(2) wrappers (for epithet, but harmless in adns).
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat,  8 Apr 2006 15:41:28 +0100
+
 adns (1.1); urgency=medium
 
   Major bugfixes:

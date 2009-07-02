@@ -3,12 +3,11 @@
  * - RR-type-specific code, and the machinery to call it
  */
 /*
- *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -63,9 +62,13 @@
  * _mailbox                   (pap +pap_mailbox822)
  * _rp                        (pa)
  * _soa                       (pa,mf,cs)
+ * _srv*                      (qdpl,(pap),pa,mf,di,(csp),cs,postsort)
+ * _byteblock                 (mf)
+ * _opaque                    (pa,cs)
  * _flat                      (mf)
  *
  * within each section:
+ *    qdpl_*
  *    pap_*
  *    pa_*
  *    dip_*
@@ -74,6 +77,7 @@
  *    mf_*
  *    csp_*
  *    cs_*
+ *    postsort_*
  */
 
 /*
@@ -905,7 +909,7 @@ static adns_status pap_mailbox822(const parseinfo *pai,
 
 static adns_status pap_mailbox(const parseinfo *pai, int *cbyte_io, int max,
 			       char **mb_r) {
-  if (pai->qu->typei->type & adns__qtf_mail822) {
+  if (pai->qu->typei->typekey & adns__qtf_mail822) {
     return pap_mailbox822(pai, cbyte_io, max, mb_r);
   } else {
     return pap_domain(pai, cbyte_io, max, mb_r, pdf_quoteok);
@@ -1001,6 +1005,235 @@ static adns_status cs_soa(vbuf *vb, const void *datap) {
 }
 
 /*
+ * _srv*  (pa*2,di,cs*2,qdpl,postsort)
+ */
+
+static adns_status qdpl_srv(adns_state ads,
+			    const char **p_io, const char *pe, int labelnum,
+			    char label_r[DNS_MAXDOMAIN], int *ll_io,
+			    adns_queryflags flags,
+			    const typeinfo *typei) {
+  int useflags;
+  const char *p_orig;
+  adns_status st;
+
+  if (labelnum < 2 && !(flags & adns_qf_quoteok_query)) {
+    useflags= adns_qf_quoteok_query;
+    p_orig= *p_io;
+  } else {
+    useflags= flags;
+    p_orig= 0;
+  }
+  st= adns__qdpl_normal(ads, p_io,pe, labelnum,label_r, ll_io, useflags,typei);
+  if (st) return st;
+
+  if (p_orig) {
+    int ll= *ll_io;
+    if (!ll || label_r[0]!='_')
+      return adns_s_querydomaininvalid;
+    if (memchr(p_orig+1, '\\', pe - (p_orig+1)))
+      return adns_s_querydomaininvalid;
+  }
+  return adns_s_ok;
+}
+
+static adns_status pap_srv_begin(const parseinfo *pai, int *cbyte_io, int max,
+				 adns_rr_srvha *rrp
+				   /* might be adns_rr_srvraw* */) {
+  const byte *dgram= pai->dgram;
+  int ti, cbyte;
+
+  cbyte= *cbyte_io;
+  if ((*cbyte_io += 6) > max) return adns_s_invaliddata;
+  
+  rrp->priority= GET_W(cbyte, ti);
+  rrp->weight=   GET_W(cbyte, ti);
+  rrp->port=     GET_W(cbyte, ti);
+  return adns_s_ok;
+}
+
+static adns_status pa_srvraw(const parseinfo *pai, int cbyte,
+			     int max, void *datap) {
+  adns_rr_srvraw *rrp= datap;
+  adns_status st;
+
+  st= pap_srv_begin(pai,&cbyte,max,datap);
+  if (st) return st;
+  
+  st= pap_domain(pai, &cbyte, max, &rrp->host,
+		 pai->qu->flags & adns_qf_quoteok_anshost ? pdf_quoteok : 0);
+  if (st) return st;
+  
+  if (cbyte != max) return adns_s_invaliddata;
+  return adns_s_ok;
+}
+
+static adns_status pa_srvha(const parseinfo *pai, int cbyte,
+			    int max, void *datap) {
+  adns_rr_srvha *rrp= datap;
+  adns_status st;
+
+  st= pap_srv_begin(pai,&cbyte,max,datap);       if (st) return st;
+  st= pap_hostaddr(pai, &cbyte, max, &rrp->ha);  if (st) return st;
+  if (cbyte != max) return adns_s_invaliddata;
+  return adns_s_ok;
+}
+
+static void mf_srvraw(adns_query qu, void *datap) {
+  adns_rr_srvraw *rrp= datap;
+  adns__makefinal_str(qu, &rrp->host);
+}
+
+static void mf_srvha(adns_query qu, void *datap) {
+  adns_rr_srvha *rrp= datap;
+  mfp_hostaddr(qu,&rrp->ha);
+}
+
+static int di_srv(adns_state ads, const void *datap_a, const void *datap_b) {
+  const adns_rr_srvraw *ap= datap_a, *bp= datap_b;
+    /* might be const adns_rr_svhostaddr* */
+
+  if (ap->priority < bp->priority) return 0;
+  if (ap->priority > bp->priority) return 1;
+  return 0;
+}
+
+static adns_status csp_srv_begin(vbuf *vb, const adns_rr_srvha *rrp
+				   /* might be adns_rr_srvraw* */) {
+  char buf[30];
+  sprintf(buf,"%u %u %u ", rrp->priority, rrp->weight, rrp->port);
+  CSP_ADDSTR(buf);
+  return adns_s_ok;
+}
+
+static adns_status cs_srvraw(vbuf *vb, const void *datap) {
+  const adns_rr_srvraw *rrp= datap;
+  adns_status st;
+  
+  st= csp_srv_begin(vb,(const void*)rrp);  if (st) return st;
+  return csp_domain(vb,rrp->host);
+}
+
+static adns_status cs_srvha(vbuf *vb, const void *datap) {
+  const adns_rr_srvha *rrp= datap;
+  adns_status st;
+
+  st= csp_srv_begin(vb,(const void*)datap);  if (st) return st;
+  return csp_hostaddr(vb,&rrp->ha);
+}
+
+static void postsort_srv(adns_state ads, void *array, int nrrs,
+			 const struct typeinfo *typei) {
+  /* we treat everything in the array as if it were an adns_rr_srvha
+   * even though the array might be of adns_rr_srvraw.  That's OK
+   * because they have the same prefix, which is all we access.
+   * We use typei->rrsz, too, rather than naive array indexing, of course.
+   */
+  char *workbegin, *workend, *search, *arrayend;
+  const adns_rr_srvha *rr;
+  union { adns_rr_srvha ha; adns_rr_srvraw raw; } rrtmp;
+  int cpriority, totalweight, runtotal;
+  long randval;
+
+  for (workbegin= array, arrayend= workbegin + typei->rrsz * nrrs;
+       workbegin < arrayend;
+       workbegin= workend) {
+    cpriority= (rr=(void*)workbegin)->priority;
+    
+    for (workend= workbegin, totalweight= 0;
+	 workend < arrayend && (rr=(void*)workend)->priority == cpriority;
+	 workend += typei->rrsz) {
+      totalweight += rr->weight;
+    }
+
+    /* Now workbegin..(workend-1) incl. are exactly all of the RRs of
+     * cpriority.  From now on, workbegin points to the `remaining'
+     * records: we select one record at a time (RFC2782 `Usage rules'
+     * and `Format of the SRV RR' subsection `Weight') to place at
+     * workbegin (swapping with the one that was there, and then
+     * advance workbegin. */
+    for (;
+	 workbegin + typei->rrsz < workend; /* don't bother if just one */
+	 workbegin += typei->rrsz) {
+      
+      randval= nrand48(ads->rand48xsubi);
+      randval %= (totalweight + 1);
+        /* makes it into 0..totalweight inclusive; with 2^10 RRs,
+	 * totalweight must be <= 2^26 so probability nonuniformity is
+	 * no worse than 1 in 2^(31-26) ie 1 in 2^5, ie
+	 *  abs(log(P_intended(RR_i) / P_actual(RR_i)) <= log(2^-5).
+	 */
+
+      for (search=workbegin, runtotal=0;
+	   (runtotal += (rr=(void*)search)->weight) < randval;
+	   search += typei->rrsz);
+      assert(search < arrayend);
+      totalweight -= rr->weight;
+      if (search != workbegin) {
+	memcpy(&rrtmp, workbegin, typei->rrsz);
+	memcpy(workbegin, search, typei->rrsz);
+	memcpy(search, &rrtmp, typei->rrsz);
+      }
+    }
+  }
+  /* tests:
+   *  dig -t srv _srv._tcp.test.iwj.relativity.greenend.org.uk.
+   *   ./adnshost_s -t srv- _sip._udp.voip.net.cam.ac.uk.
+   *   ./adnshost_s -t srv- _jabber._tcp.jabber.org
+   */
+}
+
+/*
+ * _byteblock   (mf)
+ */
+
+static void mf_byteblock(adns_query qu, void *datap) {
+  adns_rr_byteblock *rrp= datap;
+  void *bytes= rrp->data;
+  adns__makefinal_block(qu,&bytes,rrp->len);
+  rrp->data= bytes;
+}
+
+/*
+ * _opaque   (pa,cs)
+ */
+
+static adns_status pa_opaque(const parseinfo *pai, int cbyte,
+			     int max, void *datap) {
+  adns_rr_byteblock *rrp= datap;
+
+  rrp->len= max - cbyte;
+  rrp->data= adns__alloc_interim(pai->qu, rrp->len);
+  if (!rrp->data) R_NOMEM;
+  memcpy(rrp->data, pai->dgram + cbyte, rrp->len);
+  return adns_s_ok;
+}
+
+static adns_status cs_opaque(vbuf *vb, const void *datap) {
+  const adns_rr_byteblock *rrp= datap;
+  char buf[10];
+  int l;
+  unsigned char *p;
+
+  sprintf(buf,"\\# %d",rrp->len);
+  CSP_ADDSTR(buf);
+  
+  for (l= rrp->len, p= rrp->data;
+       l>=4;
+       l -= 4, p += 4) {
+    sprintf(buf," %02x%02x%02x%02x",p[0],p[1],p[2],p[3]);
+    CSP_ADDSTR(buf);
+  }
+  for (;
+       l>0;
+       l--, p++) {
+    sprintf(buf," %02x",*p);
+    CSP_ADDSTR(buf);
+  }
+  return adns_s_ok;
+}
+  
+/*
  * _flat   (mf)
  */
 
@@ -1015,10 +1248,15 @@ static void mf_flat(adns_query qu, void *data) { }
 #define DEEP_MEMB(memb) TYPESZ_M(memb), mf_##memb, cs_##memb
 #define FLAT_MEMB(memb) TYPESZ_M(memb), mf_flat, cs_##memb
 
-#define DEEP_TYPE(code,rrt,fmt,memb,parser,comparer,printer) \
- { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_##memb, printer,parser,comparer }
-#define FLAT_TYPE(code,rrt,fmt,memb,parser,comparer,printer) \
- { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_flat,   printer,parser,comparer }
+#define DEEP_TYPE(code,rrt,fmt,memb,parser,comparer,printer)	\
+ { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_##memb,		\
+      printer,parser,comparer, adns__qdpl_normal,0 }
+#define FLAT_TYPE(code,rrt,fmt,memb,parser,comparer,printer)	\
+ { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_flat,		\
+     printer,parser,comparer, adns__qdpl_normal,0 }
+#define XTRA_TYPE(code,rrt,fmt,memb,parser,comparer,printer,qdpl,postsort) \
+ { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_##memb,			   \
+    printer,parser,comparer,qdpl,postsort }
 
 static const typeinfo typeinfos[] = {
 /* Must be in ascending order of rrtype ! */
@@ -1033,25 +1271,34 @@ DEEP_TYPE(hinfo,  "HINFO", 0, intstrpair,pa_hinfo,   0,        cs_hinfo      ),
 DEEP_TYPE(mx_raw, "MX",   "raw",intstr,  pa_mx_raw,  di_mx_raw,cs_inthost    ),
 DEEP_TYPE(txt,    "TXT",   0,   manyistr,pa_txt,     0,        cs_txt        ),
 DEEP_TYPE(rp_raw, "RP",   "raw",strpair, pa_rp,      0,        cs_rp         ),
+XTRA_TYPE(srv_raw,"SRV",  "raw",srvraw , pa_srvraw,  di_srv,   cs_srvraw,
+	                                               qdpl_srv, postsort_srv),
 
 FLAT_TYPE(addr,   "A",  "addr", addr,    pa_addr,    di_addr,  cs_addr       ),
 DEEP_TYPE(ns,     "NS", "+addr",hostaddr,pa_hostaddr,di_hostaddr,cs_hostaddr ),
 DEEP_TYPE(ptr,    "PTR","checked",str,   pa_ptr,     0,        cs_domain     ),
 DEEP_TYPE(mx,     "MX", "+addr",inthostaddr,pa_mx,   di_mx,    cs_inthostaddr),
- 		     	                                   		      
+XTRA_TYPE(srv,    "SRV","+addr",srvha,   pa_srvha,   di_srv,   cs_srvha,
+          	                                       qdpl_srv, postsort_srv),
+
 DEEP_TYPE(soa,    "SOA","822",  soa,     pa_soa,     0,        cs_soa        ),
 DEEP_TYPE(rp,     "RP", "822",  strpair, pa_rp,      0,        cs_rp         ),
 };
 
+static const typeinfo typeinfo_unknown=
+DEEP_TYPE(unknown,0, "unknown",byteblock,pa_opaque,  0,        cs_opaque     );
+
 const typeinfo *adns__findtype(adns_rrtype type) {
   const typeinfo *begin, *end, *mid;
+
+  if (type & adns_r_unknown) return &typeinfo_unknown;
 
   begin= typeinfos;  end= typeinfos+(sizeof(typeinfos)/sizeof(typeinfo));
 
   while (begin < end) {
     mid= begin + ((end-begin)>>1);
-    if (mid->type == type) return mid;
-    if (type > mid->type) begin= mid+1;
+    if (mid->typekey == type) return mid;
+    if (type > mid->typekey) begin= mid+1;
     else end= mid;
   }
   return 0;

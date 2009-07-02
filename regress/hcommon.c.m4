@@ -2,12 +2,11 @@ m4_dnl hcommon.c
 m4_dnl (part of complex test harness, not of the library)
 m4_dnl - routines used for both record and playback
 
-m4_dnl  This file is
-m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-m4_dnl
-m4_dnl  It is part of adns, which is
-m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-m4_dnl    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+m4_dnl  This file is part of adns, which is
+m4_dnl    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+m4_dnl    Copyright (C) 1999-2000,2003,2006  Tony Finch
+m4_dnl    Copyright (C) 1991 Massachusetts Institute of Technology
+m4_dnl  (See the file INSTALL for full details.)
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
 m4_dnl  it under the terms of the GNU General Public License as published by
@@ -61,12 +60,14 @@ const struct Terrno Terrnos[]= {
   { "ECONNRESET",                ECONNRESET                   },
   { "ECONNREFUSED",              ECONNREFUSED                 },
   { "EPIPE",                     EPIPE                        },
+  { "ENOTSOCK",                  ENOTSOCK                     },
   {  0,                          0                            }
 };
 
 static vbuf vbw;
 
 int Hgettimeofday(struct timeval *tv, struct timezone *tz) {
+  Tensurerecordfile();
   Tmust("gettimeofday","tz",!tz);
   *tv= currenttime;
   return 0;
@@ -307,9 +308,14 @@ void Hexit(int rv) {
   if (mallocedlist.head) {
     fprintf(stderr,"adns test harness: memory leaked:");
     for (loopnode=mallocedlist.head; loopnode; loopnode=loopnode->next)
-      fprintf(stderr," %lu(%lu)",loopnode->count,(unsigned long)loopnode->sz);
+      fprintf(stderr," %lu",loopnode->count);
     putc('\n',stderr);
     if (ferror(stderr)) exit(-1);
   }
   exit(rv);
 }
+
+pid_t Hgetpid(void) {
+  return 2264; /* just some number */
+}
+

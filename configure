@@ -1507,22 +1507,70 @@ EOF
 
 
 
+
+if test "${GCC-no}" = yes; then
+	WARNS="-Wall -Wmissing-prototypes -Wwrite-strings -Wstrict-prototypes -Wcast-qual -Wpointer-arith"
+	saved_cflags="$CFLAGS"
+	CFLAGS="$CFLAGS -Wno-pointer-sign"
+	
+ echo $ac_n "checking -Wno-pointer-sign""... $ac_c" 1>&6
+echo "configure:1518: checking -Wno-pointer-sign" >&5
+ if eval "test \"`echo '$''{'adns_cv_c_wnoptrsign'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  
+  cat > conftest.$ac_ext <<EOF
+#line 1524 "configure"
+#include "confdefs.h"
+
+int main() {
+
+; return 0; }
+EOF
+if { (eval echo configure:1531: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+  rm -rf conftest*
+  adns_cv_c_wnoptrsign=yes
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -rf conftest*
+  adns_cv_c_wnoptrsign=no
+fi
+rm -f conftest*
+ 
+fi
+
+ if test "x$adns_cv_c_wnoptrsign" = xyes; then
+  true
+  echo "$ac_t""yes" 1>&6
+	 WARNS="$WARNS -Wno-pointer-sign"
+ else
+  true
+  echo "$ac_t""no" 1>&6
+ fi
+
+	CFLAGS="$saved_cflags"
+else
+	WARNS=
+fi
+
+
  
  echo $ac_n "checking __attribute__((,,))""... $ac_c" 1>&6
-echo "configure:1513: checking __attribute__((,,))" >&5
+echo "configure:1561: checking __attribute__((,,))" >&5
  if eval "test \"`echo '$''{'adns_cv_c_attribute_supported'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1519 "configure"
+#line 1567 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(int x) __attribute__((,,))
 ; return 0; }
 EOF
-if { (eval echo configure:1526: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1574: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_c_attribute_supported=yes
 else
@@ -1544,20 +1592,20 @@ EOF
 
    
  echo $ac_n "checking __attribute__((noreturn))""... $ac_c" 1>&6
-echo "configure:1548: checking __attribute__((noreturn))" >&5
+echo "configure:1596: checking __attribute__((noreturn))" >&5
  if eval "test \"`echo '$''{'adns_cv_c_attribute_noreturn'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1554 "configure"
+#line 1602 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(int x) __attribute__((noreturn))
 ; return 0; }
 EOF
-if { (eval echo configure:1561: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1609: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_c_attribute_noreturn=yes
 else
@@ -1584,20 +1632,20 @@ EOF
 
    
  echo $ac_n "checking __attribute__((const))""... $ac_c" 1>&6
-echo "configure:1588: checking __attribute__((const))" >&5
+echo "configure:1636: checking __attribute__((const))" >&5
  if eval "test \"`echo '$''{'adns_cv_c_attribute_const'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1594 "configure"
+#line 1642 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(int x) __attribute__((const))
 ; return 0; }
 EOF
-if { (eval echo configure:1601: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1649: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_c_attribute_const=yes
 else
@@ -1624,20 +1672,20 @@ EOF
 
    
  echo $ac_n "checking __attribute__((format...))""... $ac_c" 1>&6
-echo "configure:1628: checking __attribute__((format...))" >&5
+echo "configure:1676: checking __attribute__((format...))" >&5
  if eval "test \"`echo '$''{'adns_cv_attribute_format'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   
   cat > conftest.$ac_ext <<EOF
-#line 1634 "configure"
+#line 1682 "configure"
 #include "confdefs.h"
 
 int main() {
 extern int testfunction(char *y, ...) __attribute__((format(printf,1,2)))
 ; return 0; }
 EOF
-if { (eval echo configure:1641: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
+if { (eval echo configure:1689: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
   rm -rf conftest*
   adns_cv_attribute_format=yes
 else
@@ -1668,14 +1716,6 @@ EOF
  fi
 
 
-
-
-
-if test "${GCC-no}" = yes; then
-	WARNS="-Wall -Wmissing-prototypes -Wwrite-strings -Wstrict-prototypes -Wcast-qual -Wpointer-arith"
-else
-	WARNS=
-fi
 
 
 

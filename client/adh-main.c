@@ -4,12 +4,11 @@
  *   main program and useful subroutines
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -90,6 +89,7 @@ void of_type(const struct optioninfo *oi, const char *arg, const char *arg2) {
     { adns_r_ptr,    "ptr"    },
     { adns_r_mx,     "mx"     },
     { adns_r_rp,     "rp"     },
+    { adns_r_srv,    "srv"    },
     { adns_r_addr,   "addr"   },
     
     /* types with only one version */
@@ -104,11 +104,20 @@ void of_type(const struct optioninfo *oi, const char *arg, const char *arg2) {
     { adns_r_ptr_raw,  "ptr-" },
     { adns_r_mx_raw,   "mx-"  },
     { adns_r_rp_raw,   "rp-"  },
+    { adns_r_srv_raw,  "srv-" },
 
     { adns_r_none, 0 }
   };
 
   const struct typename *tnp;
+  unsigned long unknowntype;
+  char *ep;
+
+  if (strlen(arg) > 4 && !memcmp(arg,"type",4) &&
+      (unknowntype= strtoul(arg+4, &ep, 10), !*ep) && unknowntype < 65536) {
+    ov_type= unknowntype | adns_r_unknown;
+    return;
+  }
 
   for (tnp=typenames;
        tnp->type && strcmp(arg,tnp->desc);

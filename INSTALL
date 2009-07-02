@@ -25,6 +25,7 @@ The following work, but only with --disable-dynamic:
    1.0		IRIX 6.5 *not* with GCC [1], [2]
    1.0		AIX 4.1.5
    1.0		HP-UX 10.20, 11.00
+   1.1          Darwin (kernel 7.5.1)
 Later versions of the same OS should work too.  Usually entries in
 this table mean adns passes its own regression test, when compiled
 with GCC, and appears to install and run correctly.  If you have more
@@ -100,9 +101,9 @@ details for adns.  It is
  Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 
 adns is
- Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>         [1]
- Copyright (C) 1991 Massachusetts Institute of Technology  [2]
+ Copyright (C) 1997-2000,2003,2006 Ian Jackson <ian@davenant.greenend.org.uk>
+ Copyright (C) 1999-2000,2003,2006 Tony Finch <dot@dotat.at>         [1]
+ Copyright (C) 1991 Massachusetts Institute of Technology            [2]
 
 adns is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -119,8 +120,9 @@ along with adns as the file COPYING; if not, email me at the address
 above or write to the Free Software Foundation, 59 Temple Place -
 Suite 330, Boston, MA 02111-1307, USA.
 
-[1] Tony Finch holds the original copyright on client/adnslogres.c and
-    client/fanftest.c, and some modifications to those files.
+[1] Tony Finch holds the original copyright on client/adnslogres.c,
+    client/adnsheloex.c and client/fanftest.c, and some modifications
+    to those files.
 [2] MIT hold the original copyright on the included install-sh,
     which came via GNU autoconf.
 

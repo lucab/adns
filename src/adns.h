@@ -5,12 +5,13 @@
 /*
  *
  *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000,2003,2006 Ian Jackson
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
- *  
+ *    Copyright (C) 1997-2000,2003,2006 Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006 Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
@@ -51,13 +52,14 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  *
- *  $Id: adns.h,v 1.85 2003/06/22 14:34:37 ian Exp $
+ *  $Id: adns.h,v 1.95 2006/04/08 14:36:57 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
 #define ADNS_H_INCLUDED
 
 #include <stdio.h>
+#include <stdarg.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -74,7 +76,8 @@ extern "C" { /* I really dislike this - iwj. */
 typedef struct adns__state *adns_state;
 typedef struct adns__query *adns_query;
 
-typedef enum {
+typedef enum { /* In general, or together the desired flags: */
+ adns_if_none=        0x0000,/* no flags.  nicer than 0 for some compilers */
  adns_if_noenv=       0x0001,/* do not look at environment */
  adns_if_noerrprint=  0x0002,/* never print to stderr (_debug overrides) */
  adns_if_noserverwarn=0x0004,/* do not warn to stderr about duff servers etc */
@@ -87,7 +90,8 @@ typedef enum {
  adns_if_checkc_freq= 0x0300 /* consistency checks very frequently (slow!) */
 } adns_initflags;
 
-typedef enum {
+typedef enum { /* In general, or together the desired flags: */
+ adns_qf_none=           0x00000000,/* no flags */
  adns_qf_search=         0x00000001,/* use the searchlist */
  adns_qf_usevc=          0x00000002,/* use a virtual circuit (TCP conn) */
  adns_qf_owner=          0x00000004,/* fill in the owner field in the answer */
@@ -101,10 +105,28 @@ typedef enum {
 } adns_queryflags;
 
 typedef enum {
- adns__rrt_typemask=0x0ffff,
- adns__qtf_deref=   0x10000, /* dereference domains; perhaps get extra data */
- adns__qtf_mail822= 0x20000, /* return mailboxes in RFC822 rcpt field fmt   */
- 		     
+ adns_rrt_typemask=  0x0ffff,
+ adns__qtf_deref=    0x10000,/* dereference domains; perhaps get extra data */
+ adns__qtf_mail822=  0x20000,/* return mailboxes in RFC822 rcpt field fmt   */
+
+ adns_r_unknown=     0x40000,
+   /* To use this, ask for records of type   <rr-type-code>|adns_r_unknown.
+    * adns will not process the RDATA - you'll get adns_rr_byteblocks,
+    * where the int is the length and the unsigned char* points to the
+    * data.  String representation of the RR data (by adns_rrinfo) is as in
+    * RFC3597.  adns_rr_info will not return the type name in *rrtname_r
+    * (due to memory management problems); *fmtname_r will be set to
+    * "unknown".
+    *
+    * Do not specify adns_r_unknown along with a known RR type which
+    * requires domain name uncompression (see RFC3597 s4); domain names
+    * will not be uncompressed and the resulting data would be useless.
+    * Asking for meta-RR types via adns_r_unknown will not work properly
+    * either and may make adns complain about server misbehaviour, so don't
+    * do that.
+    *
+    * Don't forget adns_qf_quoteok if that's what you want. */
+
  adns_r_none=             0,
  		     
  adns_r_a=                1,
@@ -117,7 +139,7 @@ typedef enum {
  adns_r_soa_raw=          6,
  adns_r_soa=                 adns_r_soa_raw|adns__qtf_mail822, 
  		     
- adns_r_ptr_raw=         12,
+ adns_r_ptr_raw=         12, /* do not mind PTR with wrong or missing A */
  adns_r_ptr=                 adns_r_ptr_raw|adns__qtf_deref,
  		     
  adns_r_hinfo=           13,  
@@ -129,6 +151,12 @@ typedef enum {
  		     
  adns_r_rp_raw=          17,
  adns_r_rp=                  adns_r_rp_raw|adns__qtf_mail822,
+
+ /* For SRV records, query domain without _qf_quoteok_query must look
+  * as expected from SRV RFC with hostname-like Name.  _With_
+  * _quoteok_query, any query domain is allowed. */
+ adns_r_srv_raw=         33,
+ adns_r_srv=                 adns_r_srv_raw|adns__qtf_deref,
 		     
  adns_r_addr=                adns_r_a|adns__qtf_deref
  
@@ -299,6 +327,21 @@ typedef struct {
 } adns_rr_soa;
 
 typedef struct {
+  int priority, weight, port;
+  char *host;
+} adns_rr_srvraw;
+
+typedef struct {
+  int priority, weight, port;
+  adns_rr_hostaddr ha;
+} adns_rr_srvha;
+
+typedef struct {
+  int len;
+  unsigned char *data;
+} adns_rr_byteblock;
+
+typedef struct {
   adns_status status;
   char *cname; /* always NULL if query was for CNAME records */
   char *owner; /* only set if req'd in query flags; maybe 0 on error anyway */
@@ -318,6 +361,9 @@ typedef struct {
     adns_rr_inthostaddr *inthostaddr;/* mx */
     adns_rr_intstr *intstr;          /* mx_raw */
     adns_rr_soa *soa;                /* soa, soa_raw */
+    adns_rr_srvraw *srvraw;          /* srv_raw */
+    adns_rr_srvha *srvha;/* srv */
+    adns_rr_byteblock *byteblock;    /* ...|unknown */
   } rrs;
 } adns_answer;
 
@@ -337,7 +383,8 @@ typedef struct {
  *
  *  For _init, _init_strcfg, _submit and _synchronous, system errors
  *  (eg, failure to create sockets, malloc failure, etc.) return errno
- *  values.
+ *  values.  EINVAL from _init et al means the configuration file
+ *  is erroneous and cannot be parsed.
  * 
  *  For _wait and _check failures are reported in the answer
  *  structure, and only 0, ESRCH or (for _check) EAGAIN is
@@ -359,6 +406,19 @@ int adns_init(adns_state *newstate_r, adns_initflags flags,
 
 int adns_init_strcfg(adns_state *newstate_r, adns_initflags flags,
 		     FILE *diagfile /*0=>discard*/, const char *configtext);
+
+typedef void adns_logcallbackfn(adns_state ads, void *logfndata,
+				const char *fmt, va_list al);
+  /* Will be called perhaps several times for each message; when the
+   * message is complete, the string implied by fmt and al will end in
+   * a newline.  Log messages start with `adns debug:' or `adns
+   * warning:' or `adns:' (for errors), or `adns debug [PID]:'
+   * etc. if adns_if_logpid is set. */
+
+int adns_init_logfn(adns_state *newstate_r, adns_initflags flags,
+		    const char *configtext /*0=>use default config files*/,
+		    adns_logcallbackfn *logfn /*0=>logfndata is a FILE* */,
+		    void *logfndata /*0 with logfn==0 => discard*/);
 
 /* Configuration:
  *  adns_init reads /etc/resolv.conf, which is expected to be (broadly
@@ -672,10 +732,10 @@ void adns_beforeselect(adns_state ads, int *maxfd, fd_set *readfds,
  * for adns_firsttimeout.  readfds, writefds, exceptfds and maxfd_io may
  * not be 0.
  *
- * If now is not 0 then this will never actually do any I/O, or change
- * the fds that adns is using or the timeouts it wants.  In any case
- * it won't block, and it will set the timeout to zero if a query
- * finishes in _beforeselect.
+ * If tv_mod is 0 on entry then this will never actually do any I/O,
+ * or change the fds that adns is using or the timeouts it wants.  In
+ * any case it won't block, and it will set the timeout to zero if a
+ * query finishes in _beforeselect.
  */
 
 void adns_afterselect(adns_state ads, int maxfd, const fd_set *readfds,

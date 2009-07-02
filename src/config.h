@@ -1,5 +1,5 @@
 /* src/config.h.  Generated automatically by configure.  */
-/* src/config.h.in.  Generated automatically from configure.in by autoheader.  */
+/* src/config.h.in.  Generated automatically from configure.in by autoheader 2.13.  */
 
 /* Define if inline functions a la GCC are available.  */
 #define HAVE_INLINE 1

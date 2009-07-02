@@ -32,7 +32,7 @@ static void Pcheckinput(void) {
   if (ferror(Tinputfile)) Tfailed("read test log input file");
   if (feof(Tinputfile)) Psyntax("eof at syscall reply");
 }
-static void Tensureinputfile(void) {
+void Tensurerecordfile(void) {
   const char *fdstr;
   int fd;
   int chars;
@@ -196,7 +196,7 @@ static int Pbytes(byte *buf, int maxlen) {
 void Q_vb(void) {
   int r;
   const char *nl;
-  Tensureinputfile();
+  Tensurerecordfile();
   if (!adns__vbuf_ensure(&vb2,vb.used+2)) Tnomem();
   r= fread(vb2.buf,1,vb.used+2,Tinputfile);
   if (feof(Tinputfile)) {
@@ -379,6 +379,60 @@ int Hconnect(	int fd , const struct sockaddr *addr , int addrlen 	) {
  }
   if (memcmp(vb2.buf+9,"OK",2)) Psyntax("success/fail not E* or OK");
   vb2.used= 9+2;
+  r= 0;
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
+ P_updatetime();
+ return r;
+}
+int Hbind(	int fd , const struct sockaddr *addr , int addrlen 	) {
+ int r, amtread;
+ Qbind(	fd , addr , addrlen 	);
+ if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
+ fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
+ Tensurereportfile();
+ fprintf(Treportfile,"%s",vb2.buf);
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
+  Psyntax("badly formed line");
+ vb2.buf[amtread]= 0;
+ if (memcmp(vb2.buf," bind=",6)) Psyntax("syscall reply mismatch");
+ if (vb2.buf[6] == 'E') {
+  int e;
+  e= Perrno(vb2.buf+6);
+  P_updatetime();
+  errno= e;
+  return -1;
+ }
+  if (memcmp(vb2.buf+6,"OK",2)) Psyntax("success/fail not E* or OK");
+  vb2.used= 6+2;
+  r= 0;
+ assert(vb2.used <= amtread);
+ if (vb2.used != amtread) Psyntax("junk at end of line");
+ P_updatetime();
+ return r;
+}
+int Hlisten(	int fd , int backlog 	) {
+ int r, amtread;
+ Qlisten(	fd , backlog 	);
+ if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
+ fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
+ Tensurereportfile();
+ fprintf(Treportfile,"%s",vb2.buf);
+ amtread= strlen(vb2.buf);
+ if (amtread<=0 || vb2.buf[--amtread]!='\n')
+  Psyntax("badly formed line");
+ vb2.buf[amtread]= 0;
+ if (memcmp(vb2.buf," listen=",8)) Psyntax("syscall reply mismatch");
+ if (vb2.buf[8] == 'E') {
+  int e;
+  e= Perrno(vb2.buf+8);
+  P_updatetime();
+  errno= e;
+  return -1;
+ }
+  if (memcmp(vb2.buf+8,"OK",2)) Psyntax("success/fail not E* or OK");
+  vb2.used= 8+2;
   r= 0;
  assert(vb2.used <= amtread);
  if (vb2.used != amtread) Psyntax("junk at end of line");

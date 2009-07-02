@@ -3,12 +3,11 @@
  * - simple test program, not part of the library
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -77,7 +76,18 @@ static void failure_status(const char *what, adns_status st) {
 
 static void failure_errno(const char *what, int errnoval) NONRETURNING;
 static void failure_errno(const char *what, int errnoval) {
-  fprintf(stderr,"adns failure: %s: errno=%d\n",what,errnoval);
+  switch (errnoval) {
+#define CE(e) \
+  case e: fprintf(stderr,"adns failure: %s: errno=" #e "\n",what); break
+  CE(EINVAL);
+  CE(EINTR);
+  CE(ESRCH);
+  CE(EAGAIN);
+  CE(ENOSYS);
+  CE(ERANGE);
+#undef CE
+  default: fprintf(stderr,"adns failure: %s: errno=%d\n",what,errnoval); break;
+  }
   quitnow(2);
 }
 
@@ -125,7 +135,7 @@ static const adns_rrtype defaulttypes[]= {
 
 static void dumptype(adns_status ri, const char *rrtn, const char *fmtn) {
   fprintf(stdout, "%s(%s)%s%s",
-	  ri ? "?" : rrtn, ri ? "?" : fmtn ? fmtn : "-",
+	  (!ri && rrtn) ? rrtn : "?", ri ? "?" : fmtn ? fmtn : "-",
 	  ri ? " " : "", ri ? adns_strerror(ri) : "");
 }
 

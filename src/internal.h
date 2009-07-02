@@ -5,12 +5,11 @@
  * - comments regarding library data structures
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -113,8 +112,8 @@ typedef struct {
   struct timeval now;
 } parseinfo;
 
-typedef struct {
-  adns_rrtype type;
+typedef struct typeinfo {
+  adns_rrtype typekey;
   const char *rrtname;
   const char *fmtname;
   int rrsz;
@@ -147,7 +146,33 @@ typedef struct {
   /* Returns !0 if RR a should be strictly after RR b in the sort order,
    * 0 otherwise.  Must not fail.
    */
+
+  adns_status (*qdparselabel)(adns_state ads,
+			      const char **p_io, const char *pe, int labelnum,
+			      char label_r[DNS_MAXDOMAIN], int *ll_io,
+			      adns_queryflags flags,
+			      const struct typeinfo *typei);
+  /* Parses one label from the query domain string.  On entry, *p_io
+   * points to the next character to parse and *ll_io is the size of
+   * the buffer.  pe points just after the end of the query domain
+   * string.  On successful return, label_r[] and *ll_io are filled in
+   * and *p_io points to *pe or just after the label-ending `.'.  */
+
+  void (*postsort)(adns_state ads, void *array, int nrrs,
+		   const struct typeinfo *typei);
+  /* Called immediately after the RRs have been sorted, and may rearrange
+   * them.  (This is really for the benefit of SRV's bizarre weighting
+   * stuff.)  May be 0 to mean nothing needs to be done.
+   */
 } typeinfo;
+
+adns_status adns__qdpl_normal(adns_state ads,
+			      const char **p_io, const char *pe, int labelnum,
+			      char label_r[], int *ll_io,
+			      adns_queryflags flags,
+			      const typeinfo *typei);
+  /* implemented in transmit.c, used by types.c as default
+   * and as part of implementation for some fancier types */
 
 typedef struct allocnode {
   struct allocnode *next, *back;
@@ -283,7 +308,8 @@ struct query_queue { adns_query head, tail; };
 
 struct adns__state {
   adns_initflags iflags;
-  FILE *diagfile;
+  adns_logcallbackfn *logfn;
+  void *logfndata;
   int configerrno;
   struct query_queue udpw, tcpw, childw, output;
   adns_query forallnext;
@@ -310,6 +336,7 @@ struct adns__state {
     struct in_addr base, mask;
   } sortlist[MAXSORTLIST];
   char **searchlist;
+  unsigned short rand48xsubi[3];
 };
 
 /* From setup.c: */
@@ -317,6 +344,10 @@ struct adns__state {
 int adns__setnonblock(adns_state ads, int fd); /* => errno value */
 
 /* From general.c: */
+
+void adns__vlprintf(adns_state ads, const char *fmt, va_list al);
+void adns__lprintf(adns_state ads, const char *fmt,
+		   ...) PRINTFFORMAT(2,3);
 
 void adns__vdiag(adns_state ads, const char *pfx, adns_initflags prevent,
 		 int serv, adns_query qu, const char *fmt, va_list al);
@@ -372,7 +403,8 @@ void adns__sigpipe_unprotect(adns_state);
 
 adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
 			  const char *owner, int ol,
-			  const typeinfo *typei, adns_queryflags flags);
+			  const typeinfo *typei, adns_rrtype type,
+			  adns_queryflags flags);
 /* Assembles a query packet in vb.  A new id is allocated and returned.
  */
 

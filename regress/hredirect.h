@@ -13,6 +13,10 @@
 #define fcntl Hfcntl
 #undef connect
 #define connect Hconnect
+#undef bind
+#define bind Hbind
+#undef listen
+#define listen Hlisten
 #undef close
 #define close Hclose
 #undef sendto
@@ -27,6 +31,8 @@
 #define writev Hwritev
 #undef gettimeofday
 #define gettimeofday Hgettimeofday
+#undef getpid
+#define getpid Hgetpid
 #undef malloc
 #define malloc Hmalloc
 #undef free

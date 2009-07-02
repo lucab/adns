@@ -3,12 +3,11 @@
  * - main handling and parsing routine for received datagrams
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -187,7 +186,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
       continue;
     }
     if (rrtype == adns_r_cname &&
-	(qu->typei->type & adns__rrt_typemask) != adns_r_cname) {
+	(qu->answer->type & adns_rrt_typemask) != adns_r_cname) {
       if (qu->flags & adns_qf_cname_forbid) {
 	adns__query_fail(qu,adns_s_prohibitedcname);
 	return;
@@ -230,7 +229,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 	 * it contains the relevant info.
 	 */
       }
-    } else if (rrtype == (qu->typei->type & adns__rrt_typemask)) {
+    } else if (rrtype == (qu->answer->type & adns_rrt_typemask)) {
       wantedrrs++;
     } else {
       adns__debug(ads,serv,qu,"ignoring answer RR"
@@ -339,7 +338,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
 		     &ownermatched);
     assert(!st); assert(rrtype != -1);
     if (rrclass != DNS_CLASS_IN ||
-	rrtype != (qu->typei->type & adns__rrt_typemask) ||
+	rrtype != (qu->answer->type & adns_rrt_typemask) ||
 	!ownermatched)
       continue;
     adns__update_expires(qu,ttl,now);
@@ -373,7 +372,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
   if (qu->cname_dgram) {
     st= adns__mkquery_frdgram(qu->ads,&qu->vb,&qu->id,
 			      qu->cname_dgram,qu->cname_dglen,qu->cname_begin,
-			      qu->typei->type, qu->flags);
+			      qu->answer->type, qu->flags);
     if (st) { adns__query_fail(qu,st); return; }
     
     newquery= realloc(qu->query_dgram,qu->vb.used);

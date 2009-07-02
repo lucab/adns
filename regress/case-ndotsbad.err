@@ -1,1 +1,1 @@
-adns failure: init: errno=22
+adns failure: init: errno=EINVAL

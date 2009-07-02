@@ -8,8 +8,10 @@
  *   Copyright (C) 1999-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,7 +33,7 @@
  */
 
 static const char * const cvsid =
-	"$Id: adnslogres.c,v 1.20 2000/09/17 14:09:02 ian Exp $";
+	"$Id: adnslogres.c,v 1.22 2006/04/08 14:36:57 ian Exp $";
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -115,10 +117,10 @@ retry:
     }
   }
   sprintf(buf, "%.*s.%.*s.%.*s.%.*s.in-addr.arpa.",
-	  ptrs[4]-ptrs[3]-1, ptrs[3],
-	  ptrs[3]-ptrs[2]-1, ptrs[2],
-	  ptrs[2]-ptrs[1]-1, ptrs[1],
-	  ptrs[1]-ptrs[0]-1, ptrs[0]);
+	  (int)(ptrs[4]-ptrs[3]-1), ptrs[3],
+	  (int)(ptrs[3]-ptrs[2]-1), ptrs[2],
+	  (int)(ptrs[2]-ptrs[1]-1), ptrs[1],
+	  (int)(ptrs[1]-ptrs[0]-1), ptrs[0]);
   *addr= ptrs[0];
   *rest= ptrs[4]-1;
   return buf;
@@ -126,7 +128,7 @@ retry:
 
 static void printline(FILE *outf, char *start, char *addr, char *rest, char *domain) {
   if (domain)
-    fprintf(outf, "%.*s%s%s", addr - start, start, domain, rest);
+    fprintf(outf, "%.*s%s%s", (int)(addr - start), start, domain, rest);
   else
     fputs(start, outf);
   if (ferror(outf)) aargh("write output");

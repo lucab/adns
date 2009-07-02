@@ -3,12 +3,11 @@
  * - useful general-purpose resolver client program, header file
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -107,6 +106,12 @@ extern struct outstanding_list { struct query_node *head, *tail; } outstanding;
 void ensure_adns_init(void);
 void query_do(const char *domain);
 void query_done(struct query_node *qun, adns_answer *answer);
+
+void type_info(adns_rrtype type, const char **typename_r,
+	       const void *datap, char **data_r);
+  /* wrapper for adns_rr_info which uses a static buffer to provide
+   * *typename_r for adns_r_unknown */
+
 
 /* declarations related to main program and useful utility functions */
 

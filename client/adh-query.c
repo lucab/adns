@@ -4,12 +4,11 @@
  *   make queries and print answers
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,6 +52,20 @@ void ensure_adns_init(void) {
 
   if (ov_format == fmt_default)
     ov_format= ov_asynch ? fmt_asynch : fmt_simple;
+}
+
+void type_info(adns_rrtype type, const char **typename_r,
+	       const void *datap, char **data_r) {
+  static char buf[12];
+  adns_status st;
+  
+  st= adns_rr_info(type, typename_r, 0,0, datap,data_r);
+  if (st == adns_s_nomemory) sysfail("adns_rr_info failed",ENOMEM);
+  assert(!st);
+  if (typename_r && !*typename_r) {
+    sprintf(buf,"TYPE%d", (int)(type & adns_rrt_typemask));
+    *typename_r= buf;
+  }
 }
 
 static void prep_query(struct query_node **qun_r, int *quflags_r) {
@@ -221,7 +234,6 @@ static void print_status(adns_status st, struct query_node *qun, adns_answer *an
 static void print_dnsfail(adns_status st, struct query_node *qun, adns_answer *answer) {
   int r;
   const char *typename, *statusstring;
-  adns_status ist;
   
   if (ov_format == fmt_inline) {
     if (fputs("; failed ",stdout) == EOF) outerr();
@@ -232,7 +244,7 @@ static void print_dnsfail(adns_status st, struct query_node *qun, adns_answer *a
   if (st == adns_s_nxdomain) {
     r= fprintf(stderr,"%s does not exist\n", owner_show(qun,answer));
   } else {
-    ist= adns_rr_info(answer->type, &typename, 0,0,0,0);
+    type_info(answer->type, &typename, 0,0);
     if (st == adns_s_nodata) {
       r= fprintf(stderr,"%s has no %s record\n", owner_show(qun,answer), typename);
     } else {
@@ -245,7 +257,7 @@ static void print_dnsfail(adns_status st, struct query_node *qun, adns_answer *a
 }
     
 void query_done(struct query_node *qun, adns_answer *answer) {
-  adns_status st, ist;
+  adns_status st;
   int rrn, nrrs;
   const char *rrp, *realowner, *typename;
   char *datastr;
@@ -279,9 +291,7 @@ void query_done(struct query_node *qun, adns_answer *answer) {
 	 rrn++, rrp += answer->rrsz) {
       if (realowner) print_withspace(realowner);
       print_ttl(qun,answer);
-      ist= adns_rr_info(answer->type, &typename, 0, 0, rrp, &datastr);
-      if (ist == adns_s_nomemory) sysfail("adns_rr_info failed",ENOMEM);
-      assert(!ist);
+      type_info(answer->type,&typename, rrp,&datastr);
       if (qun->pqfr.show_type) print_withspace(typename);
       if (printf("%s\n",datastr) == EOF) outerr();
       free(datastr);

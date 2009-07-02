@@ -12,7 +12,7 @@ void Tshutdown(void) {
 static void R_recordtime(void) {
   int r;
   struct timeval tv, tvrel;
-  Tensureoutputfile();
+  Tensurerecordfile();
   r= gettimeofday(&tv,0); if (r) Tfailed("gettimeofday syscallbegin");
   tvrel.tv_sec= tv.tv_sec - currenttime.tv_sec;
   tvrel.tv_usec= tv.tv_usec - currenttime.tv_usec;
@@ -20,7 +20,7 @@ static void R_recordtime(void) {
   Tvbf("\n +%ld.%06ld",(long)tvrel.tv_sec,(long)tvrel.tv_usec);
   currenttime= tv;
 }
-void Tensureoutputfile(void) {
+void Tensurerecordfile(void) {
   const char *fdstr;
   int fd, r;
   if (Toutputfile) return;
@@ -36,7 +36,7 @@ void Tensureoutputfile(void) {
 }
 void Q_vb(void) {
   if (!adns__vbuf_append(&vb,"",1)) Tnomem();
-  Tensureoutputfile();
+  Tensurerecordfile();
   if (fprintf(Toutputfile," %s\n",vb.buf) == EOF) Toutputerr();
   if (fflush(Toutputfile)) Toutputerr();
 }
@@ -134,6 +134,36 @@ int Hconnect(	int fd , const struct sockaddr *addr , int addrlen 	) {
  e= errno;
  vb.used= 0;
  Tvba("connect=");
+  if (r) { Tvberrno(e); goto x_error; }
+  Tvba("OK");
+ x_error:
+ R_recordtime();
+ R_vb();
+ errno= e;
+ return r;
+}
+int Hbind(	int fd , const struct sockaddr *addr , int addrlen 	) {
+ int r, e;
+ Qbind(	fd , addr , addrlen 	);
+ r= bind(	fd , addr , addrlen 	);
+ e= errno;
+ vb.used= 0;
+ Tvba("bind=");
+  if (r) { Tvberrno(e); goto x_error; }
+  Tvba("OK");
+ x_error:
+ R_recordtime();
+ R_vb();
+ errno= e;
+ return r;
+}
+int Hlisten(	int fd , int backlog 	) {
+ int r, e;
+ Qlisten(	fd , backlog 	);
+ r= listen(	fd , backlog 	);
+ e= errno;
+ vb.used= 0;
+ Tvba("listen=");
   if (r) { Tvberrno(e); goto x_error; }
   Tvba("OK");
  x_error:

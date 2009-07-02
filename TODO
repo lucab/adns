@@ -1,8 +1,4 @@
-BUGS:
-Arnout Engelen <arnouten@sci.kun.nl> reports servfail is thought conclusive
-
 WISHLIST:
-* Support for as-yet-unrecognised query types.
 * Make timeouts configurable.
 * `fake' reverse queries (give nnn.nnn.nnn.nnn either always or on error)
 * `fake' forward queries (allow nnn.nnn.nnn.nnn -> A)
@@ -12,5 +8,7 @@ WISHLIST:
 * IPv6 transport.
 * Threadsafe version/mode.
 * Caching in the library.
-* SRV RRs.
 * Make port configurable in config file.
+* `Nameserver sent bad response' should produce a hexdump in the log
+  (see eg mail to ian@davenant Mon, 25 Oct 2004 14:19:46 +0100 re
+  `compressed datagram contains loop')

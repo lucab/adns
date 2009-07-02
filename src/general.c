@@ -4,12 +4,11 @@
  * - vbuf handling
  */
 /*
- *  This file is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *
- *  It is part of adns, which is
- *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
+ *  This file is part of adns, which is
+ *    Copyright (C) 1997-2000,2003,2006  Ian Jackson
+ *    Copyright (C) 1999-2000,2003,2006  Tony Finch
+ *    Copyright (C) 1991 Massachusetts Institute of Technology
+ *  (See the file INSTALL for full details.)
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -38,46 +37,57 @@
 
 /* Core diagnostic functions */
 
+void adns__vlprintf(adns_state ads, const char *fmt, va_list al) {
+  ads->logfn(ads,ads->logfndata,fmt,al);
+}
+
+void adns__lprintf(adns_state ads, const char *fmt, ...) {
+  va_list al;
+  va_start(al,fmt);
+  adns__vlprintf(ads,fmt,al);
+  va_end(al);
+}
+
 void adns__vdiag(adns_state ads, const char *pfx, adns_initflags prevent,
 		 int serv, adns_query qu, const char *fmt, va_list al) {
   const char *bef, *aft;
   vbuf vb;
   
-  if (!ads->diagfile ||
+  if (!ads->logfn ||
       (!(ads->iflags & adns_if_debug)
        && (!prevent || (ads->iflags & prevent))))
     return;
 
   if (ads->iflags & adns_if_logpid) {
-    fprintf(ads->diagfile,"adns%s [%ld]: ",pfx,(long)getpid());
+    adns__lprintf(ads,"adns%s [%ld]: ",pfx,(long)getpid());
   } else {
-    fprintf(ads->diagfile,"adns%s: ",pfx);
+    adns__lprintf(ads,"adns%s: ",pfx);
   }
 
-  vfprintf(ads->diagfile,fmt,al);
+  adns__vlprintf(ads,fmt,al);
 
   bef= " (";
   aft= "\n";
 
   if (qu && qu->query_dgram) {
     adns__vbuf_init(&vb);
-    fprintf(ads->diagfile,"%sQNAME=%s, QTYPE=%s",
+    adns__lprintf(ads,"%sQNAME=%s, QTYPE=%s",
 	    bef,
 	    adns__diag_domain(qu->ads,-1,0, &vb,
 			      qu->query_dgram,qu->query_dglen,DNS_HDRSIZE),
 	    qu->typei ? qu->typei->rrtname : "<unknown>");
     if (qu->typei && qu->typei->fmtname)
-      fprintf(ads->diagfile,"(%s)",qu->typei->fmtname);
+      adns__lprintf(ads,"(%s)",qu->typei->fmtname);
     bef=", "; aft=")\n";
     adns__vbuf_free(&vb);
   }
   
   if (serv>=0) {
-    fprintf(ads->diagfile,"%sNS=%s",bef,inet_ntoa(ads->servers[serv].addr));
+    adns__lprintf(ads,"%sNS=%s",bef,inet_ntoa(ads->servers[serv].addr));
     bef=", "; aft=")\n";
   }
 
-  fputs(aft,ads->diagfile);
+  adns__lprintf(ads,"%s",aft);
 }
 
 void adns__debug(adns_state ads, int serv, adns_query qu,
