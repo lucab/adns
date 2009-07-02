@@ -330,7 +330,9 @@ struct adns__state {
   sigset_t stdsigmask;
   struct pollfd pollfds_buf[MAX_POLLFDS];
   struct server {
+    sa_family_t sin_family;
     struct in_addr addr;
+    struct in6_addr addr6;
   } servers[MAXSERVERS];
   struct sortlist {
     struct in_addr base, mask;
