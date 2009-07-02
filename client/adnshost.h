@@ -8,7 +8,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -45,6 +46,11 @@
 #include "config.h"
 #include "adns.h"
 #include "dlist.h"
+#include "client.h"
+
+#ifdef ADNS_REGRESS_TEST
+# include "hredirect.h"
+#endif
 
 /* declarations related to option processing */
 
@@ -79,7 +85,8 @@ extern int ov_tcp, ov_cname, ov_format;
 extern char *ov_id;
 extern struct perqueryflags_remember ov_pqfr;
 
-extern optfunc of_help, of_type, of_ptr, of_reverse, of_asynch_id, of_cancel_id;
+extern optfunc of_config, of_version, of_help, of_type, of_ptr, of_reverse;
+extern optfunc of_asynch_id, of_cancel_id;
 
 const struct optioninfo *opt_findl(const char *opt);
 const struct optioninfo *opt_finds(const char **optp);
@@ -111,5 +118,6 @@ void *xmalloc(size_t sz);
 char *xstrsave(const char *str);
 
 extern int rcode;
+extern const char *config_text; /* 0 => use defaults */
 
 #endif

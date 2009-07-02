@@ -1,4 +1,44 @@
-adns (0.9) unstable; urgency=high
+adns (1.0); urgency=medium
+
+  Bugfixes:
+  * Treat 8-bit characters in email addrs as RFC822 `special' (=> quote).
+  * Fix incorrect `compressed datagram contains loop' error.
+  * Actually compile shared libraries by default !
+  * Fix adnsresfilter usage message to include correct default timeout.
+
+  General improvements:
+  * adnshost, adnslogres, adnsresfilter have options for config override. 
+  * adnsresfilter has --debug option.
+  * Improvements to adnslogres (incl. new -c option) from Tony Finch.
+  * adnslogres has --help option, all utilities support --version.
+  * Documentation improved somewhat, including new GPL-vs-LGPL file.
+
+  Changes for non-BETA release:
+  * Change shared library soname to 1.0.
+  * Do not install adnstest test utility.
+
+  Regression test improvements:
+  * Tests now include adnshost, adnslogres and adnsresfilter.
+  * Test cancellation both before and after query completion.
+
+  Portability fixes and cleanups:
+  * adnstest: setvbuf(stdout,...) before we do first output.
+  * Cope with compilers that don't do `inline'.
+  * Add and fix various missing system #includes.
+  * Find install-sh properly when we need to use it, and chmod it +x.
+  * Do not use variadic macro, use stdarg instead (adnslogres.c).
+  * Regression tests work even if some syscalls are already macros.
+  * #include "config.h" before "adns.h".
+  * Cast a sizeof(...) in src/event.c to unsigned long before printing.
+  * Add pre-generated versions of m4-generated files in regress/.
+  * Kill bogus warning, adh-main.c: `arg2' might be used uninitialized ...
+  * Add extra {...} near adnslogres.c:167 to kill spurious warning.
+  * Use `printf' instead of `echo -n'.
+  * Add list of tested platforms in INSTALL file.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 17 Sep 2000 15:15:58 +0100
+
+adns (0.9) BETA; urgency=high
 
   Bug fixes:
   * Don't make _processany always kill the TCP connection with the message

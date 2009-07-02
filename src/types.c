@@ -8,7 +8,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -851,7 +851,7 @@ static adns_status pap_mailbox822(const parseinfo *pai, int *cbyte_io, int max,
     c= *p++;
     if ((c&~128) < 32 || (c&~128) == 127) return adns_s_invaliddata;
     if (c == '.' && !neednorm) neednorm= 1;
-    else if (c==' ' || ctype_822special(c)) needquote++;
+    else if (c==' ' || c>=127 || ctype_822special(c)) needquote++;
     else neednorm= 0;
   }
 

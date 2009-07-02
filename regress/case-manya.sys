@@ -1,4 +1,4 @@
-default
+adnstest default
 :1 manyaddrs.test.iwj.relativity.greenend.org.uk
  start 912888920.123769
  socket type=SOCK_DGRAM

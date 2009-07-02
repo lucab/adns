@@ -1,4 +1,4 @@
-noserver
+adnstest noserver
 ,a/greenend.org.uk
  start 929580082.699581
  socket type=SOCK_DGRAM

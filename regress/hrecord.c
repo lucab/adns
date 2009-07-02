@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <string.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "harness.h"
 static FILE *Toutputfile;
 void Tshutdown(void) {
@@ -41,16 +43,10 @@ void Q_vb(void) {
 static void R_vb(void) {
   Q_vb();
 }
-int Hselect(
-	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 
-	) {
+int Hselect(	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 	) {
  int r, e;
- Qselect(
-	max , rfds , wfds , efds , to 
-	);
- r= select(
-	max , rfds , wfds , efds , to 
-	);
+ Qselect(	max , rfds , wfds , efds , to 	);
+ r= select(	max , rfds , wfds , efds , to 	);
  e= errno;
  vb.used= 0;
  Tvba("select=");
@@ -66,16 +62,10 @@ int Hselect(
  return r;
 }
 #ifdef HAVE_POLL
-int Hpoll(
-	struct pollfd *fds , int nfds , int timeout 
-	) {
+int Hpoll(	struct pollfd *fds , int nfds , int timeout 	) {
  int r, e;
- Qpoll(
-	fds , nfds , timeout 
-	);
- r= poll(
-	fds , nfds , timeout 
-	);
+ Qpoll(	fds , nfds , timeout 	);
+ r= poll(	fds , nfds , timeout 	);
  e= errno;
  vb.used= 0;
  Tvba("poll=");
@@ -89,18 +79,12 @@ int Hpoll(
  return r;
 }
 #endif
-int Hsocket(
-	int domain , int type , int protocol 
-	) {
+int Hsocket(	int domain , int type , int protocol 	) {
  int r, e;
 	Tmust("socket","domain",domain==AF_INET); 
   Tmust("socket","type",type==SOCK_STREAM || type==SOCK_DGRAM); 
- Qsocket(
-	 type 
-	);
- r= socket(
-	domain , type , protocol 
-	);
+ Qsocket(	 type 	);
+ r= socket(	domain , type , protocol 	);
  e= errno;
  vb.used= 0;
  Tvba("socket=");
@@ -112,9 +96,7 @@ int Hsocket(
  errno= e;
  return r;
 }
-int Hfcntl(
-	int fd , int cmd , ... 
-	) {
+int Hfcntl(	int fd , int cmd , ... 	) {
  int r, e;
 	va_list al; long arg; 
   Tmust("fcntl","cmd",cmd==F_SETFL || cmd==F_GETFL);
@@ -123,12 +105,8 @@ int Hfcntl(
   } else {
     arg= 0;
   } 
- Qfcntl(
-	fd , cmd , arg 
-	);
- r= fcntl(
-	fd , cmd , arg 
-	);
+ Qfcntl(	fd , cmd , arg 	);
+ r= fcntl(	fd , cmd , arg 	);
  e= errno;
  vb.used= 0;
  Tvba("fcntl=");
@@ -149,16 +127,10 @@ int Hfcntl(
  errno= e;
  return r;
 }
-int Hconnect(
-	int fd , const struct sockaddr *addr , int addrlen 
-	) {
+int Hconnect(	int fd , const struct sockaddr *addr , int addrlen 	) {
  int r, e;
- Qconnect(
-	fd , addr , addrlen 
-	);
- r= connect(
-	fd , addr , addrlen 
-	);
+ Qconnect(	fd , addr , addrlen 	);
+ r= connect(	fd , addr , addrlen 	);
  e= errno;
  vb.used= 0;
  Tvba("connect=");
@@ -170,16 +142,10 @@ int Hconnect(
  errno= e;
  return r;
 }
-int Hclose(
-	int fd 
-	) {
+int Hclose(	int fd 	) {
  int r, e;
- Qclose(
-	fd 
-	);
- r= close(
-	fd 
-	);
+ Qclose(	fd 	);
+ r= close(	fd 	);
  e= errno;
  vb.used= 0;
  Tvba("close=");
@@ -191,17 +157,11 @@ int Hclose(
  errno= e;
  return r;
 }
-int Hsendto(
-	int fd , const void *msg , int msglen , unsigned int flags , const struct sockaddr *addr , int addrlen 
-	) {
+int Hsendto(	int fd , const void *msg , int msglen , unsigned int flags , const struct sockaddr *addr , int addrlen 	) {
  int r, e;
 	Tmust("sendto","flags",flags==0); 
- Qsendto(
-	fd , msg , msglen , addr , addrlen 
-	);
- r= sendto(
-	fd , msg , msglen , flags , addr , addrlen 
-	);
+ Qsendto(	fd , msg , msglen , addr , addrlen 	);
+ r= sendto(	fd , msg , msglen , flags , addr , addrlen 	);
  e= errno;
  vb.used= 0;
  Tvba("sendto=");
@@ -213,18 +173,12 @@ int Hsendto(
  errno= e;
  return r;
 }
-int Hrecvfrom(
-	int fd , void *buf , int buflen , unsigned int flags , struct sockaddr *addr , int *addrlen 
-	) {
+int Hrecvfrom(	int fd , void *buf , int buflen , unsigned int flags , struct sockaddr *addr , int *addrlen 	) {
  int r, e;
 	Tmust("recvfrom","flags",flags==0); 
 	Tmust("recvfrom","*addrlen",*addrlen>=sizeof(struct sockaddr_in)); 
- Qrecvfrom(
-	fd , buflen , *addrlen 
-	);
- r= recvfrom(
-	fd , buf , buflen , flags , addr , addrlen 
-	);
+ Qrecvfrom(	fd , buflen , *addrlen 	);
+ r= recvfrom(	fd , buf , buflen , flags , addr , addrlen 	);
  e= errno;
  vb.used= 0;
  Tvba("recvfrom=");
@@ -239,16 +193,10 @@ int Hrecvfrom(
  errno= e;
  return r;
 }
-int Hread(
-	int fd , void *buf , size_t buflen 
-	) {
+int Hread(	int fd , void *buf , size_t buflen 	) {
  int r, e;
- Qread(
-	fd , buflen 
-	);
- r= read(
-	fd , buf , buflen 
-	);
+ Qread(	fd , buflen 	);
+ r= read(	fd , buf , buflen 	);
  e= errno;
  vb.used= 0;
  Tvba("read=");
@@ -262,16 +210,10 @@ int Hread(
  errno= e;
  return r;
 }
-int Hwrite(
-	int fd , const void *buf , size_t len 
-	) {
+int Hwrite(	int fd , const void *buf , size_t len 	) {
  int r, e;
- Qwrite(
-	fd , buf , len 
-	);
- r= write(
-	fd , buf , len 
-	);
+ Qwrite(	fd , buf , len 	);
+ r= write(	fd , buf , len 	);
  e= errno;
  vb.used= 0;
  Tvba("write=");

@@ -1,4 +1,4 @@
-default
+adnstest default
 :1 trunc.test.iwj.relativity.greenend.org.uk
  start 912888921.274801
  socket type=SOCK_DGRAM

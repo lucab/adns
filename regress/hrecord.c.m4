@@ -3,11 +3,11 @@ m4_dnl (part of complex test harness, not of the library)
 m4_dnl - recording routines
 
 m4_dnl  This file is
-m4_dnl    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 m4_dnl
 m4_dnl  It is part of adns, which is
 m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-m4_dnl    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+m4_dnl    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
 m4_dnl  it under the terms of the GNU General Public License as published by
@@ -27,9 +27,12 @@ m4_include(hmacros.i4)
 
 #include <assert.h>
 #include <string.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "harness.h"
 
@@ -150,5 +153,7 @@ int H$1(hm_args_massage($3,void)) {
  return r;
 }
 ')
+
+m4_define(`hm_specsyscall', `')
 
 m4_include(`hsyscalls.i4')

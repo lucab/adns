@@ -1,4 +1,4 @@
-default -,p
+adnstest default -,p
 :1 chiark.greenend.org.uk
  start 931719947.391142
  socket type=SOCK_DGRAM

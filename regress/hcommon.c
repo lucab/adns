@@ -1,10 +1,13 @@
-#include <fcntl.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "harness.h"
 #include "internal.h"
 vbuf vb;
@@ -42,9 +45,7 @@ int Hwritev(int fd, const struct iovec *vector, size_t count) {
   }
   return Hwrite(fd,vbw.buf,vbw.used);
 }
-void Qselect(
-	int max , const fd_set *rfds , const fd_set *wfds , const fd_set *efds , struct timeval *to 
-	) {
+void Qselect(	int max , const fd_set *rfds , const fd_set *wfds , const fd_set *efds , struct timeval *to 	) {
  vb.used= 0;
  Tvba("select");
 	Tvbf(" max=%d",max); 
@@ -56,9 +57,7 @@ void Qselect(
   Q_vb();
 }
 #ifdef HAVE_POLL
-void Qpoll(
-	const struct pollfd *fds , int nfds , int timeout 
-	) {
+void Qpoll(	const struct pollfd *fds , int nfds , int timeout 	) {
  vb.used= 0;
  Tvba("poll");
         Tvbf(" fds="); Tvbpollfds(fds,nfds); 
@@ -66,17 +65,13 @@ void Qpoll(
   Q_vb();
 }
 #endif
-void Qsocket(
-	 int type 
-	) {
+void Qsocket(	 int type 	) {
  vb.used= 0;
  Tvba("socket");
   Tvbf(type==SOCK_STREAM ? " type=SOCK_STREAM" : " type=SOCK_DGRAM"); 
   Q_vb();
 }
-void Qfcntl(
-	int fd , int cmd , long arg 
-	) {
+void Qfcntl(	int fd , int cmd , long arg 	) {
  vb.used= 0;
  Tvba("fcntl");
 	Tvbf(" fd=%d",fd); 
@@ -89,26 +84,20 @@ void Qfcntl(
   } 
   Q_vb();
 }
-void Qconnect(
-	int fd , const struct sockaddr *addr , int addrlen 
-	) {
+void Qconnect(	int fd , const struct sockaddr *addr , int addrlen 	) {
  vb.used= 0;
  Tvba("connect");
 	Tvbf(" fd=%d",fd); 
 	Tvba(" addr="); Tvbaddr(addr,addrlen); 
   Q_vb();
 }
-void Qclose(
-	int fd 
-	) {
+void Qclose(	int fd 	) {
  vb.used= 0;
  Tvba("close");
 	Tvbf(" fd=%d",fd); 
   Q_vb();
 }
-void Qsendto(
-	int fd , const void *msg , int msglen , const struct sockaddr *addr , int addrlen 
-	) {
+void Qsendto(	int fd , const void *msg , int msglen , const struct sockaddr *addr , int addrlen 	) {
  vb.used= 0;
  Tvba("sendto");
 	Tvbf(" fd=%d",fd); 
@@ -116,9 +105,7 @@ void Qsendto(
 	Tvbbytes(msg,msglen); 
   Q_vb();
 }
-void Qrecvfrom(
-	int fd , int buflen , int addrlen 
-	) {
+void Qrecvfrom(	int fd , int buflen , int addrlen 	) {
  vb.used= 0;
  Tvba("recvfrom");
 	Tvbf(" fd=%d",fd); 
@@ -126,18 +113,14 @@ void Qrecvfrom(
 	Tvbf(" *addrlen=%d",addrlen); 
   Q_vb();
 }
-void Qread(
-	int fd , size_t buflen 
-	) {
+void Qread(	int fd , size_t buflen 	) {
  vb.used= 0;
  Tvba("read");
 	Tvbf(" fd=%d",fd); 
 	Tvbf(" buflen=%lu",(unsigned long)buflen); 
   Q_vb();
 }
-void Qwrite(
-	int fd , const void *buf , size_t len 
-	) {
+void Qwrite(	int fd , const void *buf , size_t len 	) {
  vb.used= 0;
  Tvba("write");
 	Tvbf(" fd=%d",fd); 

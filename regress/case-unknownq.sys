@@ -1,4 +1,4 @@
-default
+adnstest default
 :32767 davenant.relativity.greenend.org.uk.
  start 933811310.565828
  socket type=SOCK_DGRAM

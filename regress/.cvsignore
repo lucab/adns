@@ -1,8 +1,6 @@
 Makefile
-harness.h
-hcommon.c
-hrecord
-hrecord.c
-hplayback
-hplayback.c
+*_record
+*_playback
 output-*.*
+pipe.out
+pipe.err

@@ -4,11 +4,11 @@
  */
 /*
  *  This file is
- *    Copyright (C) 1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1999-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,12 +33,19 @@
 #include <assert.h>
 #include <ctype.h>
 
-#include <sys/fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
 
-#include "adns.h"
 #include "config.h"
+#include "adns.h"
 #include "dlist.h"
 #include "tvarith.h"
+#include "client.h"
+
+#ifdef ADNS_REGRESS_TEST
+# include "hredirect.h"
+#endif
 
 struct outqueuenode {
   struct outqueuenode *next, *back;
@@ -52,6 +59,8 @@ struct outqueuenode {
 static int bracket, forever, address;
 static unsigned long timeout= 1000;
 static adns_rrtype rrt= adns_r_ptr;
+static adns_initflags initflags= 0;
+static const char *config_text;
 
 static int outblocked, inputeof;
 static struct { struct outqueuenode *head, *tail; } outqueue;
@@ -84,8 +93,7 @@ static int nonblock(int fd, int isnonblock) {
   return 0;
 }
 
-static void quit(int exitstatus) NONRETURNING;
-static void quit(int exitstatus) {
+void quitnow(int exitstatus) {
   nonblock(0,0);
   nonblock(1,0);
   exit(exitstatus);
@@ -94,7 +102,7 @@ static void quit(int exitstatus) {
 static void sysfail(const char *what) NONRETURNING;
 static void sysfail(const char *what) {
   fprintf(stderr,"adnsresfilter: system call failed: %s: %s\n",what,strerror(errno));
-  quit(2);
+  quitnow(2);
 }
 
 static void *xmalloc(size_t sz) {
@@ -108,28 +116,31 @@ static void outputerr(void) { sysfail("write to stdout"); }
 
 static void usage(void) {
   if (printf("usage: adnsresfilter [<options ...>]\n"
-	     "       adnsresfilter  -h|--help\n"
+	     "       adnsresfilter  -h|--help | --version\n"
 	     "options: -t<milliseconds>|--timeout <milliseconds>\n"
 	     "         -w|--wait        (always wait for queries to time out or fail)\n"
 	     "         -b|--brackets    (require [...] around IP addresses)\n"
 	     "         -a|--address     (always include [address] in output)\n"
 	     "         -u|--unchecked   (do not forward map for checking)\n"
+	     "         --config <text>  (use this instead of resolv.conf)\n"
+	     "         --debug          (turn on adns resolver debugging)\n"
 	     "Timeout is the maximum amount to delay any particular bit of output for.\n"
-	     "Lookups will go on in the background.  Default timeout = 100 (ms).\n")
+	     "Lookups will go on in the background.  Default timeout = 1000 (ms).\n")
       == EOF) outputerr();
+  if (fflush(stdout)) sysfail("flush stdout");
 }
 
 static void usageerr(const char *why) NONRETURNING;
 static void usageerr(const char *why) {
   fprintf(stderr,"adnsresfilter: bad usage: %s\n",why);
   usage();
-  quit(1);
+  quitnow(1);
 }
 
 static void adnsfail(const char *what, int e) NONRETURNING;
 static void adnsfail(const char *what, int e) {
   fprintf(stderr,"adnsresfilter: adns call failed: %s: %s\n",what,strerror(e));
-  quit(2);
+  quitnow(2);
 }
 
 static void settimeout(const char *arg) {
@@ -145,41 +156,33 @@ static void parseargs(const char *const *argv) {
   while ((arg= *++argv)) {
     if (arg[0] != '-') usageerr("no non-option arguments are allowed");
     if (arg[1] == '-') {
-      if (!strcmp(arg,"--brackets")) {
-	bracket= 1;
-      } else if (!strcmp(arg,"--unchecked")) {
-	rrt= adns_r_ptr_raw;
-      } else if (!strcmp(arg,"--wait")) {
-	forever= 1;
-      } else if (!strcmp(arg,"--address")) {
-	address= 1;
-      } else if (!strcmp(arg,"--help")) {
-	usage(); quit(0);
-      } else if (!strcmp(arg,"--timeout")) {
+      if (!strcmp(arg,"--timeout")) {
 	if (!(arg= *++argv)) usageerr("--timeout needs a value");
 	settimeout(arg);
 	forever= 0;
+      } else if (!strcmp(arg,"--wait")) {
+	forever= 1;
+      } else if (!strcmp(arg,"--brackets")) {
+	bracket= 1;
+      } else if (!strcmp(arg,"--address")) {
+	address= 1;
+      } else if (!strcmp(arg,"--unchecked")) {
+	rrt= adns_r_ptr_raw;
+      } else if (!strcmp(arg,"--config")) {
+	if (!(arg= *++argv)) usageerr("--config needs a value");
+	config_text= arg;
+      } else if (!strcmp(arg,"--debug")) {
+	initflags |= adns_if_debug;
+      } else if (!strcmp(arg,"--help")) {
+	usage(); quitnow(0);
+      } else if (!strcmp(arg,"--version")) {
+	VERSION_PRINT_QUIT("adnsresfilter"); quitnow(0);
       } else {
 	usageerr("unknown long option");
       }
     } else {
       while ((c= *++arg)) {
 	switch (c) {
-	case 'b':
-	  bracket= 1;
-	  break;
-	case 'u':
-	  rrt= adns_r_ptr_raw;
-	  break;
-	case 'w':
-	  forever= 1;
-	  break;
-	case 'a':
-	  address= 1;
-	  break;
-	case 'h':
-	  usage();
-	  quit(0);
 	case 't':
 	  if (*++arg) settimeout(arg);
 	  else if ((arg= *++argv)) settimeout(arg);
@@ -187,6 +190,21 @@ static void parseargs(const char *const *argv) {
 	  forever= 0;
 	  arg= "\0";
 	  break;
+	case 'w':
+	  forever= 1;
+	  break;
+	case 'b':
+	  bracket= 1;
+	  break;
+	case 'a':
+	  address= 1;
+	  break;
+	case 'u':
+	  rrt= adns_r_ptr_raw;
+	  break;
+	case 'h':
+	  usage();
+	  quitnow(0);
 	default:
 	  usageerr("unknown short option");
 	}
@@ -378,7 +396,12 @@ static void startup(void) {
   if (nonblock(1,1)) sysfail("set stdout to nonblocking mode");
   memset(&sa,0,sizeof(sa));
   sa.sin_family= AF_INET;
-  r= adns_init(&ads,0,0);  if (r) adnsfail("init",r);
+  if (config_text) {
+    r= adns_init_strcfg(&ads,initflags,stderr,config_text);
+  } else {
+    r= adns_init(&ads,initflags,0);
+  }
+  if (r) adnsfail("init",r);
   cbyte= -1;
   inbyte= -1;
   inbuf= 0;
@@ -447,7 +470,6 @@ int main(int argc, const char *const *argv) {
   }
   if (nonblock(0,0)) sysfail("un-nonblock stdin");
   if (nonblock(1,0)) sysfail("un-nonblock stdout");
-  if (ferror(stdin) || fclose(stdin)) sysfail("read stdin");
-  if (fclose(stdout)) sysfail("close stdout");
+  adns_finish(ads);
   exit(0);
 }

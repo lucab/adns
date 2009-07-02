@@ -7,7 +7,7 @@ m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 m4_dnl
 m4_dnl  It is part of adns, which is
 m4_dnl    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-m4_dnl    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+m4_dnl    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
 m4_dnl  
 m4_dnl  This program is free software; you can redistribute it and/or modify
 m4_dnl  it under the terms of the GNU General Public License as published by
@@ -27,13 +27,17 @@ m4_include(hmacros.i4)
 
 #include <assert.h>
 #include <string.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/time.h>
+
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "harness.h"
 
@@ -150,9 +154,11 @@ static void Pfdset(fd_set *set, int max) {
   
   if (vb2.buf[vb2.used++] != hm_squote[hm_squote) Psyntax("fd set start not [");
   FD_ZERO(set);
+  if (vb2.buf[vb2.used] == hm_squote]hm_squote) { vb2.used++; return; }
   for (;;) {
     r= strtoul(vb2.buf+vb2.used,&ep,10);
     if (r>=max) Psyntax("fd set member > max");
+    if (ep == (char*)vb2.buf+vb2.used) Psyntax("empty entry in fd set");
     FD_SET(r,set);
     vb2.used= ep - (char*)vb2.buf;
     c= vb2.buf[vb2.used++];
@@ -367,5 +373,7 @@ int H$1(hm_args_massage($3,void)) {
  return r;
 }
 ')
+
+m4_define(`hm_specsyscall', `')
 
 m4_include(`hsyscalls.i4')

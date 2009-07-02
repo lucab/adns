@@ -1,4 +1,4 @@
-tunnel
+adnstest tunnel
 :12 2/132.76.224.195.in-addr.arpa 2/manymorerrs.test.culture.dotat.at. 2/132.76.224.195.in-addr.arpa
  start 938365454.994875
  socket type=SOCK_DGRAM

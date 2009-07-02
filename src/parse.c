@@ -8,7 +8,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -69,10 +69,9 @@ void adns__findlabel_start(findlabel_state *fls, adns_state ads,
 
 adns_status adns__findlabel_next(findlabel_state *fls,
 				 int *lablen_r, int *labstart_r) {
-  int lablen, jumped, jumpto;
+  int lablen, jumpto;
   const char *dgram;
 
-  jumped= 0;
   dgram= fls->dgram;
   for (;;) {
     if (fls->cbyte >= fls->dglen) goto x_truncated;
@@ -80,10 +79,6 @@ adns_status adns__findlabel_next(findlabel_state *fls,
     GET_B(fls->cbyte,lablen);
     if (!(lablen & 0x0c0)) break;
     if ((lablen & 0x0c0) != 0x0c0) return adns_s_unknownformat;
-    if (jumped++) {
-      adns__diag(fls->ads,fls->serv,fls->qu,"compressed datagram contains loop");
-      return adns_s_invalidresponse;
-    }
     if (fls->cbyte >= fls->dglen) goto x_truncated;
     if (fls->cbyte >= fls->max) goto x_badresponse;
     GET_B(fls->cbyte,jumpto);
@@ -104,7 +99,6 @@ adns_status adns__findlabel_next(findlabel_state *fls,
     if (fls->dmend_r) *(fls->dmend_r)= fls->cbyte;
   }
   *lablen_r= lablen;
-/*if (labstart_r) fprintf(stderr,"label %d >%.*s<\n",lablen,lablen,fls->dgram+*labstart_r);*/
   return adns_s_ok;
 
  x_truncated:

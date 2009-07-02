@@ -7,7 +7,7 @@
 #
 #  It is part of adns, which is
 #    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-#    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+#    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,26 +31,49 @@ casename="$1"
 case="case-$casename"
 ocase="output-$casename"
 
-exec <"$case.sys"
-read initfile initflags
-read queryargs
+exec 4<"$case.sys"
+read <&4 program initfile initflags
+read <&4 queryargs
 
 initstring="`cat init-$initfile.text`"
+xinitflagsf=$program-xinitflags.text
+if test -f $xinitflagsf
+then
+	initflags="$initflags `cat $xinitflagsf`";
+else
+	initflags="$initflags /"
+fi
 
 rm -f $ocase.*
 
 EF_DISABLE_BANNER=1
 export EF_DISABLE_BANNER
 
+if test -f "$case.in"
+then
+	exec <"$case.in"
+else
+	exec </dev/null
+fi
+
+playback=./${program}_playback
+if test ! -f $playback
+then
+	printf "SKIPPED-$casename "
+	mrc=5
+	exit
+fi
+
 set +e
-ADNS_TEST_REPORT_FD=3 3>>"$ocase.report" >"$ocase.out" 2>"$ocase.err" \
- ./hplayback $initflags "/$initstring" $queryargs
+ADNS_TEST_REPORT_FD=3 ADNS_TEST_IN_FD=4 \
+ 3>>"$ocase.report" 4<&4 >"$ocase.out" 2>"$ocase.err" \
+ $playback $initflags"$initstring" $queryargs
 rc=$?
 set -e
 
 if [ "$rc" = 5 ]
 then
-	echo -n "SKIPPED-$casename "
+	printf "SKIPPED-$casename "
 	mrc=5
 	exit
 fi
@@ -68,7 +91,7 @@ do
 	fi
 done
 
-cat >"$ocase.leftover"
+cat <&4 >"$ocase.leftover"
 if egrep . /dev/null "$ocase.leftover"
 then
 	failwhy="$failwhy EXITED EARLY"
@@ -82,5 +105,5 @@ then
 	exit
 fi
 
-echo -n "$casename "
+printf "$casename "
 mrc=0

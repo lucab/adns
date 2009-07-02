@@ -1,4 +1,4 @@
-noserver -,p
+adnstest noserver -,p
 :1 a.b.c.d
  start 940011574.766962
  socket type=SOCK_DGRAM

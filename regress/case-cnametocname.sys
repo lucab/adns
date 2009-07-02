@@ -1,4 +1,4 @@
-default
+adnstest default
 :1 intel.ugcs.caltech.edu.
  start 938369896.279735
  socket type=SOCK_DGRAM

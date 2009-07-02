@@ -1,4 +1,4 @@
-ncipher
+adnstest ncipher
 254.0.99.203.in-addr.arpa
  start 933269010.293417
  socket type=SOCK_DGRAM

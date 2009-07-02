@@ -1,4 +1,4 @@
-default -0x16
+adnstest default -0x16
 4.204.50.158.in-addr.arpa
  start 939764098.821612
  socket type=SOCK_DGRAM

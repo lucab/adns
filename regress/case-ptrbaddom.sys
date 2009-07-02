@@ -1,4 +1,4 @@
-default
+adnstest default
 :12,65548 37.45.18.172.in-addr.arpa.test.iwj.relativity.greenend.org.uk.
  start 951960654.608219
  socket type=SOCK_DGRAM

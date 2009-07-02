@@ -1,4 +1,4 @@
-default
+adnstest default
 :15,65551 broken-mail.test.iwj.relativity.greenend.org.uk. 256/broken-mail.test.iwj.relativity.greenend.org.uk. 0x104/broken-mail.test.iwj.relativity.greenend.org.uk.
  start 934726868.117908
  socket type=SOCK_DGRAM

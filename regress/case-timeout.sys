@@ -1,4 +1,4 @@
-noserver
+adnstest noserver
 :1 chiark.greenend.org.uk
  start 912889153.349504
  socket type=SOCK_DGRAM

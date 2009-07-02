@@ -4,7 +4,8 @@ WISHLIST:
 * `fake' forward queries (allow nnn.nnn.nnn.nnn -> A)
 * DNSSEC compatibility - be able to retreive KEY and SIG RRs
 * DNSSEC minimum functionality - ignore Additional when AD set.
-* DNSSEC functionality - provide security ?
-* Test cancellation in regression tests.
 * IPv6 name<->address translation - but which version ??
 * IPv6 transport.
+* Threadsafe version/mode.
+* Caching in the library.
+* SRV RRs.

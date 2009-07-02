@@ -4,11 +4,11 @@
  */
 /*
  *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,12 +33,11 @@
 #include <string.h>
 #include <errno.h>
 
+#include "config.h"
 #include "adns.h"
 
-#include "config.h"
-
-#ifndef OUTPUTSTREAM
-# define OUTPUTSTREAM stdout
+#ifdef ADNS_REGRESS_TEST
+# include "hredirect.h"
 #endif
 
 struct myctx {
@@ -220,6 +219,8 @@ int main(int argc, char *const *argv) {
   mcs= malloc(tc ? sizeof(*mcs)*qc*tc : 1);
   if (!mcs) { perror("malloc mcs"); quitnow(3); }
 
+  setvbuf(stdout,0,_IOLBF,0);
+  
   if (initstring) {
     r= adns_init_strcfg(&ads,
 			(adns_if_debug|adns_if_noautosys|adns_if_checkc_freq)
@@ -232,8 +233,6 @@ int main(int argc, char *const *argv) {
   }
   if (r) failure_errno("init",r);
 
-  setvbuf(stdout,0,_IOLBF,0);
-  
   for (qi=0; qi<qc; qi++) {
     fdom_split(fdomlist[qi],&domain,&qflags,ownflags,sizeof(ownflags));
     if (!consistsof(ownflags,"a")) usageerr("unknown ownqueryflag");

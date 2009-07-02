@@ -1,4 +1,4 @@
-default
+adnstest default
 ,a/greenend.org.uk
  start 929580078.542974
  socket type=SOCK_DGRAM

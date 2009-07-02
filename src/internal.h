@@ -10,7 +10,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -44,6 +44,10 @@ typedef unsigned char byte;
 
 #include "adns.h"
 #include "dlist.h"
+
+#ifdef ADNS_REGRESS_TEST
+# include "hredirect.h"
+#endif
 
 /* Configuration and constants */
 

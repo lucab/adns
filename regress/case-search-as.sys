@@ -1,4 +1,4 @@
-default
+adnstest default
 :1 0x5/news 0x5/chiark 1/news 1/chiark
  start 931992052.232208
  socket type=SOCK_DGRAM

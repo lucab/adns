@@ -1,4 +1,4 @@
-default
+adnstest default
 :131089 silly-rp.test.iwj.relativity.greenend.org.uk
  start 923859567.899146
  socket type=SOCK_DGRAM

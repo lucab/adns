@@ -1,11 +1,14 @@
 #include <assert.h>
 #include <string.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "harness.h"
 static FILE *Tinputfile, *Treportfile;
 static vbuf vb2;
@@ -101,9 +104,11 @@ static void Pfdset(fd_set *set, int max) {
   char *ep;
   if (vb2.buf[vb2.used++] != '[') Psyntax("fd set start not [");
   FD_ZERO(set);
+  if (vb2.buf[vb2.used] == ']') { vb2.used++; return; }
   for (;;) {
     r= strtoul(vb2.buf+vb2.used,&ep,10);
     if (r>=max) Psyntax("fd set member > max");
+    if (ep == (char*)vb2.buf+vb2.used) Psyntax("empty entry in fd set");
     FD_SET(r,set);
     vb2.used= ep - (char*)vb2.buf;
     c= vb2.buf[vb2.used++];
@@ -213,14 +218,10 @@ void Q_vb(void) {
   nl= memchr(vb.buf,'\n',vb.used);
   fprintf(Treportfile," %.*s\n", (int)(nl ? nl - (const char*)vb.buf : vb.used), vb.buf);
 }
-int Hselect(
-	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 
-	) {
+int Hselect(	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 	) {
  int r, amtread;
  char *ep;
- Qselect(
-	max , rfds , wfds , efds , to 
-	);
+ Qselect(	max , rfds , wfds , efds , to 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -249,14 +250,10 @@ int Hselect(
  return r;
 }
 #ifdef HAVE_POLL
-int Hpoll(
-	struct pollfd *fds , int nfds , int timeout 
-	) {
+int Hpoll(	struct pollfd *fds , int nfds , int timeout 	) {
  int r, amtread;
  char *ep;
- Qpoll(
-	fds , nfds , timeout 
-	);
+ Qpoll(	fds , nfds , timeout 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -283,16 +280,12 @@ int Hpoll(
  return r;
 }
 #endif
-int Hsocket(
-	int domain , int type , int protocol 
-	) {
+int Hsocket(	int domain , int type , int protocol 	) {
  int r, amtread;
  char *ep;
 	Tmust("socket","domain",domain==AF_INET); 
   Tmust("socket","type",type==SOCK_STREAM || type==SOCK_DGRAM); 
- Qsocket(
-	 type 
-	);
+ Qsocket(	 type 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -317,9 +310,7 @@ int Hsocket(
  P_updatetime();
  return r;
 }
-int Hfcntl(
-	int fd , int cmd , ... 
-	) {
+int Hfcntl(	int fd , int cmd , ... 	) {
  int r, amtread;
 	va_list al; long arg; 
   Tmust("fcntl","cmd",cmd==F_SETFL || cmd==F_GETFL);
@@ -328,9 +319,7 @@ int Hfcntl(
   } else {
     arg= 0;
   } 
- Qfcntl(
-	fd , cmd , arg 
-	);
+ Qfcntl(	fd , cmd , arg 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -369,13 +358,9 @@ int Hfcntl(
  P_updatetime();
  return r;
 }
-int Hconnect(
-	int fd , const struct sockaddr *addr , int addrlen 
-	) {
+int Hconnect(	int fd , const struct sockaddr *addr , int addrlen 	) {
  int r, amtread;
- Qconnect(
-	fd , addr , addrlen 
-	);
+ Qconnect(	fd , addr , addrlen 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -400,13 +385,9 @@ int Hconnect(
  P_updatetime();
  return r;
 }
-int Hclose(
-	int fd 
-	) {
+int Hclose(	int fd 	) {
  int r, amtread;
- Qclose(
-	fd 
-	);
+ Qclose(	fd 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -431,15 +412,11 @@ int Hclose(
  P_updatetime();
  return r;
 }
-int Hsendto(
-	int fd , const void *msg , int msglen , unsigned int flags , const struct sockaddr *addr , int addrlen 
-	) {
+int Hsendto(	int fd , const void *msg , int msglen , unsigned int flags , const struct sockaddr *addr , int addrlen 	) {
  int r, amtread;
  char *ep;
 	Tmust("sendto","flags",flags==0); 
- Qsendto(
-	fd , msg , msglen , addr , addrlen 
-	);
+ Qsendto(	fd , msg , msglen , addr , addrlen 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -464,15 +441,11 @@ int Hsendto(
  P_updatetime();
  return r;
 }
-int Hrecvfrom(
-	int fd , void *buf , int buflen , unsigned int flags , struct sockaddr *addr , int *addrlen 
-	) {
+int Hrecvfrom(	int fd , void *buf , int buflen , unsigned int flags , struct sockaddr *addr , int *addrlen 	) {
  int r, amtread;
 	Tmust("recvfrom","flags",flags==0); 
 	Tmust("recvfrom","*addrlen",*addrlen>=sizeof(struct sockaddr_in)); 
- Qrecvfrom(
-	fd , buflen , *addrlen 
-	);
+ Qrecvfrom(	fd , buflen , *addrlen 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -499,13 +472,9 @@ int Hrecvfrom(
  P_updatetime();
  return r;
 }
-int Hread(
-	int fd , void *buf , size_t buflen 
-	) {
+int Hread(	int fd , void *buf , size_t buflen 	) {
  int r, amtread;
- Qread(
-	fd , buflen 
-	);
+ Qread(	fd , buflen 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
@@ -531,14 +500,10 @@ int Hread(
  P_updatetime();
  return r;
 }
-int Hwrite(
-	int fd , const void *buf , size_t len 
-	) {
+int Hwrite(	int fd , const void *buf , size_t len 	) {
  int r, amtread;
  char *ep;
- Qwrite(
-	fd , buf , len 
-	);
+ Qwrite(	fd , buf , len 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();

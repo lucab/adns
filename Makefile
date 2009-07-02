@@ -6,7 +6,7 @@
 #
 #  It is part of adns, which is
 #    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
-#    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+#    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
 # 
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -22,10 +22,13 @@
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
 
-DISTVERSION=	0.9
+# Remember to change ADNS_VERSION_STRING in client/client.h too, and
+# possibly library soname (MAJOR and MINOR in settings.make.in).
+DISTVERSION=	1.0
+
 srcdir=		.
 
-ENABLE_DYNAMIC=	yes
+ENABLE_DYNAMIC=	elf
 ifeq ($(ENABLE_DYNAMIC),elf)
 SUBDIRS_DYNAMIC=dynamic
 else
@@ -66,9 +69,8 @@ dist:			distprep
 check:			all
 	$(MAKE) -C regress check
 
-README README-update:
-	lynx -dump -number_links -cfg=/dev/null \
-		http://www.chiark.greenend.org.uk/~ian/adns/ >README.tmp
+README:			README.html
+	lynx -dump -number_links -cfg=/dev/null ./README.html >README.tmp
 	mv -f README.tmp README
 
 TAGS info dvi:

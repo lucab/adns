@@ -10,7 +10,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -395,7 +395,8 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
       }
       if (udpaddrlen != sizeof(udpaddr)) {
 	adns__diag(ads,-1,0,"datagram received with wrong address length %d"
-		   " (expected %d)", udpaddrlen,sizeof(udpaddr));
+		   " (expected %lu)", udpaddrlen,
+		   (unsigned long)sizeof(udpaddr));
 	continue;
       }
       if (udpaddr.sin_family != AF_INET) {

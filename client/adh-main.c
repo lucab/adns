@@ -9,7 +9,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,9 +28,22 @@
 
 #include "adnshost.h"
 
+int rcode;
+const char *config_text;
+
+static int used, avail;
+static char *buf;
+
+void quitnow(int rc) {
+  if (ads) adns_finish(ads);
+  free(buf);
+  free(ov_id);
+  exit(rc);
+}
+
 void sysfail(const char *what, int errnoval) {
   fprintf(stderr,"adnshost failed: %s: %s\n",what,strerror(errnoval));
-  exit(10);
+  quitnow(10);
 }
 
 void usageerr(const char *fmt, ...) {
@@ -40,7 +53,7 @@ void usageerr(const char *fmt, ...) {
   vfprintf(stderr,fmt,al);
   va_end(al);
   putc('\n',stderr);
-  exit(11);
+  quitnow(11);
 }
 
 void outerr(void) {
@@ -60,6 +73,10 @@ char *xstrsave(const char *str) {
   p= xmalloc(strlen(str)+1);
   strcpy(p,str);
   return p;
+}
+
+void of_config(const struct optioninfo *oi, const char *arg, const char *arg2) {
+  config_text= arg;
 }
 
 void of_type(const struct optioninfo *oi, const char *arg, const char *arg2) {
@@ -100,8 +117,6 @@ void of_type(const struct optioninfo *oi, const char *arg, const char *arg2) {
   ov_type= tnp->type;
 }
 
-int rcode;
-
 static void process_optarg(const char *arg,
 			   const char *const **argv_p,
 			   const char *value) {
@@ -125,7 +140,7 @@ static void process_optarg(const char *arg,
       } else if (oip->type == ot_funcarg2) {
 	assert(argv_p);
 	arg= *++(*argv_p);
-	if (arg) arg2= *++(*argv_p);
+	arg2= arg ? *++(*argv_p) : 0;
 	if (!arg || !arg2)
 	  usageerr("option --%s requires two more arguments", oip->lopt);
       } else {
@@ -164,9 +179,6 @@ static void process_optarg(const char *arg,
 }
     
 static void read_stdin(void) {
-  static int used, avail;
-  static char *buf;
-
   int anydone, r;
   char *newline, *space;
 
@@ -248,5 +260,5 @@ int main(int argc, const char *const *argv) {
   }
 x_quit:
   if (fclose(stdout)) outerr();
-  exit(rcode);
+  quitnow(rcode);
 }

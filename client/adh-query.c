@@ -9,7 +9,7 @@
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -34,16 +34,21 @@ struct outstanding_list outstanding;
 static unsigned long idcounter;
 
 void ensure_adns_init(void) {
+  adns_initflags initflags;
   int r;
   
   if (ads) return;
 
   if (signal(SIGPIPE,SIG_IGN) == SIG_ERR) sysfail("ignore SIGPIPE",errno);
-  r= adns_init(&ads,
-	       adns_if_noautosys|adns_if_nosigpipe |
-	       (ov_env ? 0 : adns_if_noenv) |
-	       ov_verbose,
-	       0);
+
+  initflags= adns_if_noautosys|adns_if_nosigpipe|ov_verbose;
+  if (!ov_env) initflags |= adns_if_noenv;
+
+  if (config_text) {
+    r= adns_init_strcfg(&ads, initflags, stderr, config_text);
+  } else {
+    r= adns_init(&ads, initflags, 0);
+  }
   if (r) sysfail("adns_init",r);
 
   if (ov_format == fmt_default)
@@ -143,6 +148,7 @@ void query_do(const char *domain) {
 static void dequeue_query(struct query_node *qun) {
   LIST_UNLINK(outstanding,qun);
   free(qun->id);
+  free(qun->owner);
   free(qun);
 }
 

@@ -5,11 +5,11 @@
 /*
  *
  *  This file is
- *    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+ *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,13 +22,13 @@
  *  GNU General Public License for more details.
  *
  * 
- *  For the benefit of certain LGPL'd `omnibus' software which provides
- *  a uniform interface to various things including adns, I make the
- *  following additional licence.  I do this because the GPL would
- *  otherwise force either the omnibus software to be GPL'd or for the
- *  adns-using part to be distributed separately.
+ *  For the benefit of certain LGPL'd `omnibus' software which
+ *  provides a uniform interface to various things including adns, I
+ *  make the following additional licence.  I do this because the GPL
+ *  would otherwise force either the omnibus software to be GPL'd or
+ *  the adns-using part to be distributed separately.
  *  
- *  So, you may also redistribute and/or modify adns.h (but only the
+ *  So: you may also redistribute and/or modify adns.h (but only the
  *  public header file adns.h and not any other part of adns) under the
  *  terms of the GNU Library General Public License as published by the
  *  Free Software Foundation; either version 2 of the License, or (at
@@ -39,10 +39,10 @@
  *  applications where the whole distribution is not GPL'd, are still
  *  likely to be in violation of the GPL.  Anyone who wants to do this
  *  should contact Ian Jackson.  Please note that to avoid encouraging
- *  people to infringe the GPL as it applies the body of adns, Ian thinks
- *  that if you take advantage of the special exception to redistribute
- *  just adns.h under the LGPL, you should retain this paragraph in its
- *  place in the appropriate copyright statements.
+ *  people to infringe the GPL as it applies to the body of adns, Ian
+ *  thinks that if you take advantage of the special exception to
+ *  redistribute just adns.h under the LGPL, you should retain this
+ *  paragraph in its place in the appropriate copyright statements.
  *
  *
  *  You should have received a copy of the GNU General Public License,
@@ -51,7 +51,7 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  *
- *  $Id: adns.h,v 1.80 2000/05/09 21:50:50 ian Exp $
+ *  $Id: adns.h,v 1.83 2000/09/17 01:56:18 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
@@ -151,12 +151,6 @@ typedef enum {
  * names) will be quoted, as \X if it is a printing ASCII character or
  * \DDD otherwise.
  *
- * (The characters which will be unquoted are the printing 7-bit ASCII
- * characters except the punctuation characters " ( ) @ ; $ \
-
- * I.e. unquoted characters are alphanumerics, and the following
- * punctuation characters:  ! # % ^ & * - _ = + [ ] { } 
- *
  * If the query goes via a CNAME then the canonical name (ie, the
  * thing that the CNAME record refers to) is usually allowed to
  * contain any characters, which will be quoted as above.  With
@@ -179,20 +173,33 @@ typedef enum {
  * header field.  The particular format used is that if the mailbox
  * requires quoting according to the rules in RFC822 then the
  * local-part is quoted in double quotes, which end at the next
- * unescaped double quote.  (\ is the escape char, and is doubled, and
- * is used to escape only \ and ".)  Otherwise the local-part is
- * presented as-is.  In any case this is followed by an @ and the
- * domain.  The domain will not contain any characters not legal in
- * hostnames.  adns will protect the application from local parts
- * containing control characters - these appear to be legal according
- * to RFC822 but are clearly a bad idea.
+ * unescaped double quote (\ is the escape char, and is doubled, and
+ * is used to escape only \ and ").  If the local-part is legal
+ * without quoting according to RFC822, it is presented as-is.  In any
+ * case the local-part is followed by an @ and the domain.  The domain
+ * will not contain any characters not legal in hostnames.
+ *
+ * Unquoted local-parts may contain any printing 7-bit ASCII
+ * except the punctuation characters ( ) < > @ , ; : \ " [ ]
+ * I.e. they may contain alphanumerics, and the following
+ * punctuation characters:  ! # % ^ & * - _ = + { } .
+ *
+ * adns will reject local parts containing control characters (byte
+ * values 0-31, 127-159, and 255) - these appear to be legal according
+ * to RFC822 (at least 0-127) but are clearly a bad idea.  RFC1035
+ * syntax does not make any distinction between a single RFC822
+ * quoted-string containing full stops, and a series of quoted-strings
+ * separated by full stops; adns will return anything that isn't all
+ * valid atoms as a single quoted-string.  RFC822 does not allow
+ * high-bit-set characters at all, but adns does allow them in
+ * local-parts, treating them as needing quoting.
  *
  * If you ask for the domain with _raw then _no_ checking is done
  * (even on the host part, regardless of adns_qf_quoteok_anshost), and
  * you just get the domain name in master file format.
  *
  * If no mailbox is supplied the returned string will be `.' in either
- * caswe.
+ * case.
  */
 
 typedef enum {

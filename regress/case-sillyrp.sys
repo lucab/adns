@@ -1,4 +1,4 @@
-default
+adnstest default
 :17,131089 0x70/silly-rp-dm.test.iwj.relativity.greenend.org.uk 0x70/silly-rp-lp.test.iwj.relativity.greenend.org.uk silly-rp-lp.test.iwj.relativity.greenend.org.uk silly-rp-dm.test.iwj.relativity.greenend.org.uk
  start 929580348.131048
  socket type=SOCK_DGRAM

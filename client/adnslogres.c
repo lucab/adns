@@ -4,12 +4,12 @@
  */
 /*
  *  This file is
- *   Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *   Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *   Copyright (C) 1999-2000 Ian Jackson <ian@davenant.greenend.org.uk>
  *
  *  It is part of adns, which is
  *    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
- *    Copyright (C) 1999 Tony Finch <dot@dotat.at>
+ *    Copyright (C) 1999-2000 Tony Finch <dot@dotat.at>
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
  */
 
 static const char * const cvsid =
-	"$Id: adnslogres.c,v 1.10 2000/04/11 21:15:39 ian Exp $";
+	"$Id: adnslogres.c,v 1.20 2000/09/17 14:09:02 ian Exp $";
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -42,11 +42,19 @@ static const char * const cvsid =
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 
+#include "config.h"
 #include "adns.h"
+#include "client.h"
+
+#ifdef ADNS_REGRESS_TEST
+# include "hredirect.h"
+#endif
 
 /* maximum number of concurrent DNS queries */
-#define MAXPENDING 1000
+#define MAXMAXPENDING 64000
+#define DEFMAXPENDING 2000
 
 /* maximum length of a line */
 #define MAXLINE 1024
@@ -55,13 +63,23 @@ static const char * const cvsid =
 #define OPT_DEBUG 1
 #define OPT_POLL 2
 
-static const char *progname;
+static const char *const progname= "adnslogres";
+static const char *config_text;
 
-#define msg(fmt, args...) fprintf(stderr, "%s: " fmt "\n", progname, ##args)
 #define guard_null(str) ((str) ? (str) : "")
 
 #define sensible_ctype(type,ch) (type((unsigned char)(ch)))
   /* isfoo() functions from ctype.h can't safely be fed char - blech ! */
+
+static void msg(const char *fmt, ...) {
+  va_list al;
+
+  fprintf(stderr, "%s: ", progname);
+  va_start(al,fmt);
+  vfprintf(stderr, fmt, al);
+  va_end(al);
+  fputc('\n',stderr);
+}
 
 static void aargh(const char *cause) {
   const char *why = strerror(errno);
@@ -146,69 +164,107 @@ static logline *readline(FILE *inf, adns_state adns, int opts) {
   return NULL;
 }
 	
-static void proclog(FILE *inf, FILE *outf, int opts) {
+static void proclog(FILE *inf, FILE *outf, int maxpending, int opts) {
   int eof, err, len;
   adns_state adns;
   adns_answer *answer;
   logline *head, *tail, *line;
+  adns_initflags initflags;
 
-  errno= adns_init(&adns, (opts & OPT_DEBUG) ? adns_if_debug : 0, 0);
+  initflags= (opts & OPT_DEBUG) ? adns_if_debug : 0;
+  if (config_text) {
+    errno= adns_init_strcfg(&adns, initflags, stderr, config_text);
+  } else {
+    errno= adns_init(&adns, initflags, 0);
+  }
   if (errno) aargh("adns_init");
   head= tail= readline(inf, adns, opts);
   len= 1; eof= 0;
   while (head) {
-    if (opts & OPT_DEBUG)
-      msg("%d in queue; checking %.*s", len,
-	  head->rest-head->addr, guard_null(head->addr));
-    if (eof || len > MAXPENDING)
-      if (opts & OPT_POLL)
-	err= adns_wait_poll(adns, &head->query, &answer, NULL);
-      else
-	err= adns_wait(adns, &head->query, &answer, NULL);
-    else
-      err= adns_check(adns, &head->query, &answer, NULL);
-    if (err != EAGAIN) {
+    while (head) {
+      if (opts & OPT_DEBUG)
+	msg("%d in queue; checking %.*s", len,
+	    head->rest-head->addr, guard_null(head->addr));
+      if (eof || len >= maxpending) {
+	if (opts & OPT_POLL)
+	  err= adns_wait_poll(adns, &head->query, &answer, NULL);
+	else
+	  err= adns_wait(adns, &head->query, &answer, NULL);
+      } else {
+	err= adns_check(adns, &head->query, &answer, NULL);
+      }
+      if (err == EAGAIN) break;
+      if (err) {
+	fprintf(stderr, "%s: adns_wait/check: %s", progname, strerror(err));
+	exit(1);
+      }
       printline(outf, head->start, head->addr, head->rest,
 		answer->status == adns_s_ok ? *answer->rrs.str : NULL);
       line= head; head= head->next;
-      free(line); free(answer);
+      free(line);
+      free(answer);
       len--;
     }
     if (!eof) {
       line= readline(inf, adns, opts);
-      if (!line)
+      if (line) {
+        if (!head) head= line;
+        else tail->next= line;
+        tail= line; len++;
+      } else {
 	eof= 1;
-      else {
-	if (!head)
-	  head= line;
-	else
-	  tail->next= line;
-	tail= line;
-	len++;
       }
     }
   }
   adns_finish(adns);
 }
 
+static void printhelp(FILE *file) {
+  fputs("usage: adnslogres [<options>] [<logfile>]\n"
+	"       adnslogres --version|--help\n"
+	"options: -c <concurrency>  set max number of outstanding queries\n"
+	"         -p                use poll(2) instead of select(2)\n"
+	"         -d                turn on debugging\n"
+	"         -C <config>       use instead of contents of resolv.conf\n",
+	stdout);
+}
+
 static void usage(void) {
-  fprintf(stderr, "usage: %s [-d] [-p] [logfile]\n", progname);
+  printhelp(stderr);
   exit(1);
 }
 
 int main(int argc, char *argv[]) {
-  int c, opts;
+  int c, opts, maxpending;
+  extern char *optarg;
   FILE *inf;
 
-  progname= strrchr(*argv, '/');
-  if (progname)
-    progname++;
-  else
-    progname= *argv;
-  opts= 0;
+  if (argv[1] && !strncmp(argv[1],"--",2)) {
+    if (!strcmp(argv[1],"--help")) {
+      printhelp(stdout);
+    } else if (!strcmp(argv[1],"--version")) {
+      fputs(VERSION_MESSAGE("adnslogres"),stdout);
+    } else {
+      usage();
+    }
+    if (ferror(stdout) || fclose(stdout)) { perror("stdout"); exit(1); }
+    exit(0);
+  }
 
-  while ((c= getopt(argc, argv, "dp")) != -1)
+  maxpending= DEFMAXPENDING;
+  opts= 0;
+  while ((c= getopt(argc, argv, "c:C:dp")) != -1)
     switch (c) {
+    case 'c':
+      maxpending= atoi(optarg);
+      if (maxpending < 1 || maxpending > MAXMAXPENDING) {
+       fprintf(stderr, "%s: unfeasible concurrency %d\n", progname, maxpending);
+       exit(1);
+      }
+      break;
+    case 'C':
+      config_text= optarg;
+      break;
     case 'd':
       opts|= OPT_DEBUG;
       break;
@@ -233,7 +289,7 @@ int main(int argc, char *argv[]) {
   if (!inf)
     aargh("couldn't open input");
 
-  proclog(inf, stdout, opts);
+  proclog(inf, stdout, maxpending, opts);
 
   if (fclose(inf))
     aargh("fclose input");

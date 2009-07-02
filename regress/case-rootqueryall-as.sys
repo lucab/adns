@@ -1,4 +1,4 @@
-default
+adnstest default
 . 1/.
  start 931992019.753022
  socket type=SOCK_DGRAM

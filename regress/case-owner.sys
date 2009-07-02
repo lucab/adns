@@ -1,4 +1,4 @@
-default
+adnstest default
 4/chiark.greenend.org.uk
  start 933206012.504679
  socket type=SOCK_DGRAM

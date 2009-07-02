@@ -1,4 +1,4 @@
-default
+adnstest default
 :1 1/news.davenant
  start 924363451.882765
  socket type=SOCK_DGRAM

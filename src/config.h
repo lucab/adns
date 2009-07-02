@@ -1,6 +1,9 @@
 /* src/config.h.  Generated automatically by configure.  */
 /* src/config.h.in.  Generated automatically from configure.in by autoheader.  */
 
+/* Define if inline functions a la GCC are available.  */
+#define HAVE_INLINE 1
+
 /* Define if function attributes a la GCC 2.5 and higher are available.  */
 #define HAVE_GNUC25_ATTRIB 1
 
@@ -19,6 +22,9 @@
 /* Define if you have the poll function.  */
 #define HAVE_POLL 1
 
+/* Define if you have the <sys/select.h> header file.  */
+#define HAVE_SYS_SELECT_H 1
+
 /* Define if you have the nsl library (-lnsl).  */
 /* #undef HAVE_LIBNSL */
 
@@ -26,6 +32,10 @@
 /* #undef HAVE_LIBSOCKET */
 
 /* Use the definitions: */
+
+#ifndef HAVE_INLINE
+#define inline
+#endif
 
 #ifdef HAVE_POLL
 #include <sys/poll.h>
@@ -89,4 +99,8 @@ struct pollfd { int fd; short events; short revents; };
 
 #ifdef HAVEUSE_RPCTYPES_H
 #include <rpc/types.h>
+#endif
+
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
 #endif

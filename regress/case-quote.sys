@@ -1,4 +1,4 @@
-default
+adnstest default
 :1 hyphen.cname.test.iwj.relativity.greenend.org.uk dot.cname.test.iwj.relativity.greenend.org.uk plus.cname.test.iwj.relativity.greenend.org.uk slash.cname.test.iwj.relativity.greenend.org.uk underscore.cname.test.iwj.relativity.greenend.org.uk quote.cname.test.iwj.relativity.greenend.org.uk backslash.cname.test.iwj.relativity.greenend.org.uk null.cname.test.iwj.relativity.greenend.org.uk space.cname.test.iwj.relativity.greenend.org.uk hash.cname.test.iwj.relativity.greenend.org.uk del.cname.test.iwj.relativity.greenend.org.uk meta-null.cname.test.iwj.relativity.greenend.org.uk meta-del.cname.test.iwj.relativity.greenend.org.uk
  start 951958420.936685
  socket type=SOCK_DGRAM

@@ -1,4 +1,4 @@
-default
+adnstest default
 292/170.99.219.194.in-addr.arpa
  start 933809632.795174
  socket type=SOCK_DGRAM
