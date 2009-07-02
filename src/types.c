@@ -54,7 +54,7 @@
  * _strpair                   (mf,cs)
  * _intstrpair                (mf,cs)
  * _hinfo                     (pa)
- * _mailbox                   (pap)
+ * _mailbox                   (pap +pap_mailbox822)
  * _rp                        (pa)
  * _soa                       (pa,mf,cs)
  * _flat                      (mf)
@@ -791,8 +791,8 @@ static adns_status pa_hinfo(const parseinfo *pai, int cbyte, int max, void *data
  * _mailbox   (pap)
  */
 
-static adns_status pap_mailbox(const parseinfo *pai, int *cbyte_io, int max,
-			       char **mb_r) {
+static adns_status pap_mailbox822(const parseinfo *pai, int *cbyte_io, int max,
+				  char **mb_r) {
   int lablen, labstart, i, needquote, c, r, neednorm;
   const unsigned char *p;
   char *str;
@@ -845,6 +845,16 @@ static adns_status pap_mailbox(const parseinfo *pai, int *cbyte_io, int max,
   str[vb->used]= 0;
   *mb_r= str;
   return adns_s_ok;
+}
+
+static adns_status pap_mailbox(const parseinfo *pai, int *cbyte_io, int max,
+			       char **mb_r) {
+  if (pai->qu->typei->type & adns__qtf_mail822) {
+    return pap_mailbox822(pai, cbyte_io, max, mb_r);
+  } else {
+    return pap_domain(pai, cbyte_io, max, mb_r,
+		      pai->qu->flags & adns_qf_quoteok_anshost ? pdf_quoteok : 0);
+  }
 }
 
 /*

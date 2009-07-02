@@ -7,7 +7,7 @@ case="case-$casename"
 ocase="output-$casename"
 
 exec <"$case.sys"
-read initfile
+read initfile initflags
 read queryargs
 
 initstring="`cat init-$initfile.text`"
@@ -16,7 +16,7 @@ rm -f $ocase.*
 
 set +e
 ADNS_TEST_REPORT_FD=3 3>>"$ocase.report" >"$ocase.out" 2>"$ocase.err" \
- ./hplayback "/$initstring" $queryargs
+ ./hplayback $initflags "/$initstring" $queryargs
 rc=$?
 set -e
 

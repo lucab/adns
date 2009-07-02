@@ -1,0 +1,34 @@
+syscallr  close=OK
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  select=0 rfds=[] wfds=[] efds=[]
+syscallr  sendto=40
+syscallr  fcntl=OK
+syscallr  fcntl=~O_NONBLOCK&...
+syscallr  socket=4

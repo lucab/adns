@@ -9,17 +9,19 @@ configure:642: checking whether we are using GNU C
 configure:651: gcc -E conftest.c
 configure:666: checking whether gcc accepts -g
 configure:696: checking for ranlib
-configure:725: checking for socket
-configure:753: gcc -o conftest -g -O2   conftest.c  1>&5
-configure:827: checking for inet_ntoa
-configure:855: gcc -o conftest -g -O2   conftest.c  1>&5
-configure:930: checking for inet_aton
-configure:958: gcc -o conftest -g -O2   conftest.c  1>&5
-configure:1030: checking __attribute__((,,))
-configure:1043: gcc -c -g -O2  conftest.c 1>&5
-configure:1065: checking __attribute__((noreturn))
-configure:1078: gcc -c -g -O2  conftest.c 1>&5
-configure:1105: checking __attribute__((const))
-configure:1118: gcc -c -g -O2  conftest.c 1>&5
-configure:1145: checking __attribute__((format...))
-configure:1158: gcc -c -g -O2  conftest.c 1>&5
+configure:726: checking for poll
+configure:754: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:780: checking for socket
+configure:808: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:882: checking for inet_ntoa
+configure:910: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:985: checking for inet_aton
+configure:1013: gcc -o conftest -g -O2   conftest.c  1>&5
+configure:1085: checking __attribute__((,,))
+configure:1098: gcc -c -g -O2  conftest.c 1>&5
+configure:1120: checking __attribute__((noreturn))
+configure:1133: gcc -c -g -O2  conftest.c 1>&5
+configure:1160: checking __attribute__((const))
+configure:1173: gcc -c -g -O2  conftest.c 1>&5
+configure:1200: checking __attribute__((format...))
+configure:1213: gcc -c -g -O2  conftest.c 1>&5

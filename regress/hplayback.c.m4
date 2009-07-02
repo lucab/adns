@@ -89,6 +89,20 @@ static void Parg(const char *argname) {
   if (vb2.buf[vb2.used++] != hm_squote=hm_squote) Psyntax("not = after argument name");
 }
 
+static int Pstring_maybe(const char *string) {
+  int l;
+
+  l= strlen(string);
+  if (memcmp(vb2.buf+vb2.used,string,l)) return 0;
+  vb2.used+= l;
+  return 1;
+}
+
+static void Pstring(const char *string, const char *emsg) {
+  if (Pstring_maybe(string)) return;
+  Psyntax(emsg);
+}
+
 static int Perrno(const char *stuff) {
   const struct Terrno *te;
   int r;
@@ -134,6 +148,47 @@ static void Pfdset(fd_set *set, int max) {
     if (c == hm_squote]hm_squote) break;
     if (c != hm_squote,hm_squote) Psyntax("fd set separator not ,");
   }
+}
+
+static int Ppollfdevents(void) {
+  int events;
+
+  if (Pstring_maybe("0")) return 0;
+  events= 0;
+
+  if (Pstring_maybe("POLLIN")) {
+    events |= POLLIN;
+    if (!Pstring_maybe("|")) return events;
+  }
+
+  if (Pstring_maybe("POLLOUT")) {
+    events |= POLLOUT;
+    if (!Pstring_maybe("|")) return events;
+  }
+
+  Pstring("POLLPRI","pollfdevents PRI?");
+  return events;
+}
+
+static void Ppollfds(struct pollfd *fds, int nfds) {
+  int i;
+  char *ep;
+  const char *comma= "";
+  
+  if (vb2.buf[vb2.used++] != hm_squote[hm_squote) Psyntax("pollfds start not [");
+  for (i=0; i<nfds; i++) {
+    Pstring("{fd=","{fd= in pollfds");
+    fds->fd= strtoul(vb2.buf+vb2.used,&ep,10);
+    vb2.used= ep - (char*)vb2.buf;    
+    Pstring(", events=",", events= in pollfds");
+    fds->events= Ppollfdevents();
+    Pstring(", revents=",", revents= in pollfds");
+    fds->revents= Ppollfdevents();
+    Pstring("}","} in pollfds");
+    Pstring(comma,"separator in pollfds");
+    comma= ", ";
+  }
+  if (vb2.buf[vb2.used++] != hm_squote]hm_squote) Psyntax("pollfds end not ]");
 }
 
 static void Paddr(struct sockaddr *addr, int *lenr) {
@@ -281,6 +336,7 @@ int H$1(hm_args_massage($3,void)) {
 
  hm_create_nothing
  m4_define(`hm_arg_fdset_io',`Parg("$'`1"); Pfdset($'`1,$'`2);')
+ m4_define(`hm_arg_pollfds_io',`Parg("$'`1"); Ppollfds($'`1,$'`2);')
  m4_define(`hm_arg_addr_out',`Parg("$'`1"); Paddr($'`1,$'`2);')
  $3
  if (vb2.used != vb2.avail) Psyntax("junk at end of line");

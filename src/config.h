@@ -13,6 +13,9 @@
 /* Define if printf-format argument lists a la GCC are available.  */
 #define HAVE_GNUC25_PRINTFFORMAT 1
 
+/* Define if you have the poll function.  */
+#define HAVE_POLL 1
+
 /* Define if you have the nsl library (-lnsl).  */
 /* #undef HAVE_LIBNSL */
 
@@ -20,6 +23,15 @@
 /* #undef HAVE_LIBSOCKET */
 
 /* Use the definitions: */
+
+#ifdef HAVE_POLL
+#include <sys/poll.h>
+#else
+struct pollfd { int fd; short events; short revents; };
+#define POLLIN  1
+#define POLLPRI 2
+#define POLLOUT 4
+#endif
 
 /* GNU C attributes. */
 #ifndef FUNCATTR

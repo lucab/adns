@@ -49,6 +49,15 @@ void Qselect(
   else Tvba(" to=null"); 
   Q_vb();
 }
+void Qpoll(
+	const struct pollfd *fds , int nfds , int timeout 
+	) {
+ vb.used= 0;
+ Tvba("poll");
+        Tvbf(" fds="); Tvbpollfds(fds,nfds); 
+	Tvbf(" timeout=%d",timeout); 
+  Q_vb();
+}
 void Qsocket(
 	 int type 
 	) {
@@ -153,6 +162,29 @@ void Tvbfdset(int max, const fd_set *fds) {
     Tvba(comma);
     Tvbf("%d",i);
     comma= ",";
+  }
+  Tvba("]");
+}
+static void Tvbpollevents(int events) {
+  const char *delim= "";
+  events &= (POLLIN|POLLOUT|POLLPRI);
+  if (!events) { Tvba("0"); return; }
+  if (events & POLLIN) { Tvba("POLLIN"); delim= "|"; }
+  if (events & POLLOUT) { Tvba(delim); Tvba("POLLOUT"); delim= "|"; }
+  if (events & POLLPRI) { Tvba(delim); Tvba("POLLPRI"); }
+}
+void Tvbpollfds(const struct pollfd *fds, int nfds) {
+  const char *comma= "";
+  Tvba("[");
+  while (nfds>0) {
+    Tvba(comma);
+    Tvbf("{fd=%d, events=",fds->fd);
+    Tvbpollevents(fds->events);
+    Tvba(", revents=");
+    Tvbpollevents(fds->revents);
+    Tvba("}");
+    comma= ", ";
+    nfds--; fds++;
   }
   Tvba("]");
 }

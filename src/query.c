@@ -437,6 +437,7 @@ void adns__query_done(adns_query qu) {
   parent= qu->parent;
   if (parent) {
     LIST_UNLINK_PART(parent->children,qu,siblings.);
+    if (!parent->children.head) LIST_UNLINK(qu->ads->childw,parent);
     qu->ctx.callback(parent,qu);
     free_query_allocs(qu);
     free(qu);

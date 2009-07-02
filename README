@@ -37,11 +37,12 @@
 Forthcoming:
 
    I hope that future versions may also have the following features:
-     * The library will be useable by threads in a multithreaded program
-       in a natural way. It will multiplex many threads' queries through
-       a single query socket.
-     * Limited caching behaviour.
+     * The library should be useable by threads in a multithreaded
+       program in a natural way. It should multiplex many threads'
+       queries through a single query socket.
      * IPv6 support.
+     * Some kind of awareness of DNSSEC.
+     * Possibly some very limited caching behaviour.
        
    (Technical note: adns requires a real nameserver like BIND or [1]Dents
    running on the same system or a nearby one, which must be willing to
@@ -53,12 +54,18 @@ Documentation
 
    I'm afraid there is no manual yet. However, competent C programmers
    should be able to use the library based on the commented [2]adns.h
-   header file (from version 0.1).
+   header file (from version 0.3).
    
 Feedback
 
-   If you are subscribed to adns-discuss please send bug reports there;
-   otherwise mail them to adns-bugreports@chiark.greenend.org.uk.
+   I'd be pleased if you would let me know if you're using my library in
+   your project, and what you think of it.
+   
+   If you are subscribed to adns-discuss please send feedback, including
+   bug reports, there; otherwise send mail to
+   adns-bugreports@chiark.greenend.org.uk. If you'd prefer that your
+   message wasn't forwarded to the adns-bugreports list, send it to
+   adns-maint@chiark.greendend.org.uk.
    
 Mailinglists
 
@@ -117,11 +124,11 @@ Copyright and licensing
 References
 
    1. http://www.dents.org/
-   2. http://www.chiark.greenend.org.uk/~ian/adns/adns.h.0.1.txt
+   2. http://www.chiark.greenend.org.uk/~ian/adns/adns.h.0.3.txt
    3. http://www.chiark.greenend.org.uk/mailman/listinfo
    4. http://www.chiark.greenend.org.uk/~ian/adns/
    5. http://www.chiark.greenend.org.uk/~ian/adns/adns.tar.gz
-   6. http://www.chiark.greenend.org.uk/~ian/adns/adns.h.0.1.txt
+   6. http://www.chiark.greenend.org.uk/~ian/adns/adns.h.0.3.txt
    7. ftp://ftp.chiark.greenend.org.uk/users/ian/adns/
    8. http://www.gnu.org/
    9. http://www.gnu.org/order/ftp.html

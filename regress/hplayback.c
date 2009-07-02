@@ -54,6 +54,17 @@ static void Parg(const char *argname) {
   vb2.used+= l;
   if (vb2.buf[vb2.used++] != '=') Psyntax("not = after argument name");
 }
+static int Pstring_maybe(const char *string) {
+  int l;
+  l= strlen(string);
+  if (memcmp(vb2.buf+vb2.used,string,l)) return 0;
+  vb2.used+= l;
+  return 1;
+}
+static void Pstring(const char *string, const char *emsg) {
+  if (Pstring_maybe(string)) return;
+  Psyntax(emsg);
+}
 static int Perrno(const char *stuff) {
   const struct Terrno *te;
   int r;
@@ -94,6 +105,40 @@ static void Pfdset(fd_set *set, int max) {
     if (c == ']') break;
     if (c != ',') Psyntax("fd set separator not ,");
   }
+}
+static int Ppollfdevents(void) {
+  int events;
+  if (Pstring_maybe("0")) return 0;
+  events= 0;
+  if (Pstring_maybe("POLLIN")) {
+    events |= POLLIN;
+    if (!Pstring_maybe("|")) return events;
+  }
+  if (Pstring_maybe("POLLOUT")) {
+    events |= POLLOUT;
+    if (!Pstring_maybe("|")) return events;
+  }
+  Pstring("POLLPRI","pollfdevents PRI?");
+  return events;
+}
+static void Ppollfds(struct pollfd *fds, int nfds) {
+  int i;
+  char *ep;
+  const char *comma= "";
+  if (vb2.buf[vb2.used++] != '[') Psyntax("pollfds start not [");
+  for (i=0; i<nfds; i++) {
+    Pstring("{fd=","{fd= in pollfds");
+    fds->fd= strtoul(vb2.buf+vb2.used,&ep,10);
+    vb2.used= ep - (char*)vb2.buf;    
+    Pstring(", events=",", events= in pollfds");
+    fds->events= Ppollfdevents();
+    Pstring(", revents=",", revents= in pollfds");
+    fds->revents= Ppollfdevents();
+    Pstring("}","} in pollfds");
+    Pstring(comma,"separator in pollfds");
+    comma= ", ";
+  }
+  if (vb2.buf[vb2.used++] != ']') Psyntax("pollfds end not ]");
 }
 static void Paddr(struct sockaddr *addr, int *lenr) {
   struct sockaddr_in *sa= (struct sockaddr_in*)addr;
@@ -187,6 +232,38 @@ int Hselect(
 	Parg("rfds"); Pfdset(rfds,max); 
 	Parg("wfds"); Pfdset(wfds,max); 
 	Parg("efds"); Pfdset(efds,max); 
+ if (vb2.used != vb2.avail) Psyntax("junk at end of line");
+ P_updatetime();
+ return r;
+}
+int Hpoll(
+	struct pollfd *fds , int nfds , int timeout 
+	) {
+ int r;
+ char *ep;
+ Qpoll(
+	fds , nfds , timeout 
+	);
+ if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
+ fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
+ Tensurereportfile();
+ fprintf(Treportfile,"syscallr %s",vb2.buf);
+ vb2.avail= strlen(vb2.buf);
+ if (vb.avail<=0 || vb2.buf[--vb2.avail]!='\n')
+  Psyntax("badly formed line");
+ vb2.buf[vb2.avail]= 0;
+ if (memcmp(vb2.buf," poll=",6)) Psyntax("syscall reply mismatch");
+ if (vb2.buf[6] == 'E') {
+  int e;
+  e= Perrno(vb2.buf+6);
+  P_updatetime();
+  errno= e;
+  return -1;
+ }
+  r= strtoul(vb2.buf+6,&ep,10);
+  if (*ep && *ep!=' ') Psyntax("return value not E* or positive number");
+  vb2.used= ep - (char*)vb2.buf;
+        Parg("fds"); Ppollfds(fds,nfds); 
  if (vb2.used != vb2.avail) Psyntax("junk at end of line");
  P_updatetime();
  return r;

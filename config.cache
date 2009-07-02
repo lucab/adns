@@ -14,6 +14,7 @@
 #
 ac_cv_func_inet_aton=${ac_cv_func_inet_aton=yes}
 ac_cv_func_inet_ntoa=${ac_cv_func_inet_ntoa=yes}
+ac_cv_func_poll=${ac_cv_func_poll=yes}
 ac_cv_func_socket=${ac_cv_func_socket=yes}
 ac_cv_prog_CC=${ac_cv_prog_CC=gcc}
 ac_cv_prog_RANLIB=${ac_cv_prog_RANLIB=ranlib}

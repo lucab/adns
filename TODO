@@ -1,0 +1,7 @@
+DNSSEC compatibility
+ - be able to retreive KEY and SIG RRs
+
+DNSSEC functionality
+ - provide security
+
+Easy-to-use query tool

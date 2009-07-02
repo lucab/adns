@@ -1,0 +1,3 @@
+syscallr  fcntl=OK
+syscallr  fcntl=~O_NONBLOCK&...
+syscallr  socket=4

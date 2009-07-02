@@ -63,6 +63,28 @@ int Hselect(
  errno= e;
  return r;
 }
+int Hpoll(
+	struct pollfd *fds , int nfds , int timeout 
+	) {
+ int r, e;
+ Qpoll(
+	fds , nfds , timeout 
+	);
+ r= poll(
+	fds , nfds , timeout 
+	);
+ e= errno;
+ vb.used= 0;
+ Tvba("poll=");
+  if (r==-1) { Tvberrno(e); goto x_error; }
+  Tvbf("%d",r);
+        Tvba(" fds="); Tvbpollfds(fds,nfds); 
+ x_error:
+ R_recordtime();
+ R_vb();
+ errno= e;
+ return r;
+}
 int Hsocket(
 	int domain , int type , int protocol 
 	) {

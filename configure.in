@@ -21,6 +21,7 @@ AC_CONFIG_HEADER(src/config.h)
 AC_PROG_CC
 AC_PROG_RANLIB
 
+AC_CHECK_FUNCS(poll)
 ADNS_C_GETFUNC(socket,socket)
 ADNS_C_GETFUNC(inet_ntoa,nsl)
 

@@ -19,11 +19,14 @@
  *  along with this program; if not, write to the Free Software Foundation,
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
- *  $Id: adns.h,v 1.48 1999/04/17 15:41:16 ian Exp $
+ *  $Id: adns.h,v 1.54 1999/07/14 22:47:16 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
 #define ADNS_H_INCLUDED
+#ifdef __cplusplus
+extern "C" { /* I really dislike this - iwj. */
+#endif
 
 #include <stdio.h>
 
@@ -91,15 +94,15 @@ typedef enum {
   
 } adns_rrtype;
 
-/* In queries without qtf_quoteok_*, all domains must have standard
- * legal syntax.  In queries _with_ qtf_anyquote, domains in the query
- * or response may contain any characters, quoted according to
- * RFC1035 5.1.  On input to adns, the char* is a pointer to the
- * interior of a " delimited string, except that " may appear in it,
- * and on output, the char* is a pointer to a string which would be
- * legal either inside or outside " delimiters, and any characters
- * not usually legal in domain names will be quoted as \X
- * (if the character is 33-126 except \ and ") or \DDD.
+/* In queries without qf_quoteok_*, all domains must have standard
+ * legal syntax.  In queries _with_ qf_quoteok_*, domains in the query
+ * or response may contain any characters, quoted according to RFC1035
+ * 5.1.  On input to adns, the char* is a pointer to the interior of a
+ * " delimited string, except that " may appear in it, and on output,
+ * the char* is a pointer to a string which would be legal either
+ * inside or outside " delimiters, and any characters not usually
+ * legal in domain names will be quoted as \X (if the character is
+ * 33-126 except \ and ") or \DDD.
  *
  * Do not ask for _raw records containing mailboxes without
  * specifying _qf_anyquote.
@@ -111,6 +114,9 @@ typedef enum {
   /* locally induced errors */
   adns_s_nomemory,
   adns_s_unknownrrtype,
+  adns_s_systemfail,
+
+  adns_s_max_localfail= 29,
   
   /* remotely induced errors, detected locally */
   adns_s_timeout,
@@ -118,6 +124,8 @@ typedef enum {
   adns_s_norecurse,
   adns_s_invalidresponse,
   adns_s_unknownformat,
+
+  adns_s_max_remotefail= 59,
   
   /* remotely induced errors, reported by remote server to us */
   adns_s_rcodeservfail,
@@ -125,7 +133,7 @@ typedef enum {
   adns_s_rcodenotimplemented,
   adns_s_rcoderefused,
   adns_s_rcodeunknown,
-  
+
   adns_s_max_tempfail= 99,
 
   /* remote configuration errors */
@@ -228,15 +236,25 @@ typedef struct {
  *  If the call is successful, *query_io, *answer_r, and *context_r
  *  will all be set.
  * Errors:
- *  Return values are 0 or an errno value;
- *  Seriously fatal system errors (eg, failure to create sockets,
- *  malloc failure, etc.) return errno values;
- *  Other errors (nameserver failure, timed out connections, &c)
- *  are returned in the status field of the answer.  If status is
- *  nonzero then nrrs will be 0, otherwise it will be >0.
- *  type will always be the type requested;
- *  If no (appropriate) requests are done adns_check returns EWOULDBLOCK;
- *  If no (appropriate) requests are outstanding adns_query and adns_wait return ESRCH;
+ *  Return values are 0 or an errno value.
+ *
+ *  For _init, _init_strcfg, _submit and _synchronous, system errors
+ *  (eg, failure to create sockets, malloc failure, etc.) return errno
+ *  values.
+ * 
+ *  For _wait and _check failures are reported in the answer
+ *  structure, and only 0, ESRCH or (for _check) EWOULDBLOCK is
+ *  returned: if no (appropriate) requests are done adns_check returns
+ *  EWOULDBLOCK; if no (appropriate) requests are outstanding both
+ *  adns_query and adns_wait return ESRCH.
+ *
+ *  Additionally, _wait can return EINTR if you set adns_if_eintr.
+ *
+ *  All other errors (nameserver failure, timed out connections, &c)
+ *  are returned in the status field of the answer.  After a
+ *  successful _wait or _check, if status is nonzero then nrrs will be
+ *  0, otherwise it will be >0.  type will always be the type
+ *  requested.
  */
 
 int adns_init(adns_state *newstate_r, adns_initflags flags,
@@ -252,8 +270,8 @@ int adns_synchronous(adns_state ads,
 		     adns_answer **answer_r);
 
 /* NB: if you set adns_if_noautosys then _submit and _check do not
- * make any system calls; you must use adns_callback (possibly after
- * adns_interest) to actually get things to happen.
+ * make any system calls; you must use some of the asynch-io event
+ * processing functions to actually get things to happen.
  */
 
 int adns_submit(adns_state ads,
@@ -275,36 +293,40 @@ int adns_wait(adns_state ads,
 
 void adns_cancel(adns_query query);
 
-void adns_finish(adns_state);
+/* The adns_query you get back from _submit is valid (ie, can be
+ * legitimately passed into adns functions) until it is returned by
+ * adns_check or adns_wait, or passed to adns_cancel.  After that it
+ * must not be used.  You can rely on it not being reused until the
+ * first adns_submit or _transact call using the same adns_state after
+ * it became invalid, so you may compare it for equality with other
+ * query handles until you next call _query or _transact.
+ */
+
+void adns_finish(adns_state ads);
 /* You may call this even if you have queries outstanding;
  * they will be cancelled.
  */
 
-int adns_callback(adns_state, int maxfd, const fd_set *readfds, const fd_set *writefds,
-		  const fd_set *exceptfds);
-/* Gives adns flow-of-control for a bit.  This will never block.
- * If maxfd == -1 then adns will check (make nonblocking system calls on)
- * all of its own filedescriptors; otherwise it will only use those
- * < maxfd and specified in the fd_set's, as if select had returned them.
- * Other fd's may be in the fd_sets, and will be ignored.
- * _callback returns how many adns fd's were in the various sets, so
- * you can tell if your select handling code has missed something and is going awol.
+
+void adns_forallqueries_begin(adns_state ads);
+adns_query adns_forallqueries_next(adns_state ads, void **context_r);
+/* Iterator functions, which you can use to loop over the outstanding
+ * (submitted but not yet successfuly checked/waited) queries.
  *
- * May also return -1 if a critical syscall failed, setting errno.
+ * You can only have one iteration going at once.  You may call _begin
+ * at any time; after that, an iteration will be in progress.  You may
+ * only call _next when an iteration is in progress - anything else
+ * may coredump.  The iteration remains in progress until _next
+ * returns 0, indicating that all the queries have been walked over,
+ * or ANY other adns function is called with the same adns_state (or a
+ * query in the same adns_state).  There is no need to explicitly
+ * finish an iteration.
+ *
+ * context_r may be 0.  *context_r may not be set when _next returns 0.
  */
 
-void adns_interest(adns_state, int *maxfd_io, fd_set *readfds_io,
-		   fd_set *writefds_io, fd_set *exceptfds_io,
-		   struct timeval **tv_mod, struct timeval *tv_buf);
-/* Find out file descriptors adns is interested in, and when it
- * would like the opportunity to time something out.  If you do not plan to
- * block then tv_mod may be 0.  Otherwise, tv_mod may point to 0 meaning
- * you have no timeout of your own, in which case tv_buf must be non-null and
- * _interest may fill it in and set *tv_mod=tv_buf.
- * readfds, writefds, exceptfds and maxfd may not be 0.
- */
-
-/* Example expected/legal calling sequences:
+/*
+ * Example expected/legal calling sequence for submit/check/wait:
  *  adns_init
  *  adns_submit 1
  *  adns_submit 2
@@ -315,17 +337,199 @@ void adns_interest(adns_state, int *maxfd_io, fd_set *readfds_io,
  *  adns_wait 3
  *  ....
  *  adns_finish
+ */
+
+/*
+ * Entrypoints for generic asynch io:
+ * (these entrypoints are not very useful except in combination with *
+ * some of the other I/O model calls which can tell you which fds to
+ * be interested in):
+ *
+ * Note that any adns call may cause adns to open and close fds, so
+ * you must call beforeselect or beforepoll again just before
+ * blocking, or you may not have an up-to-date list of it's fds.
+ */
+
+int adns_processany(adns_state ads);
+/* Gives adns flow-of-control for a bit.  This will never block, and
+ * can be used with any threading/asynch-io model.  If some error
+ * occurred which might cause an event loop to spin then the errno
+ * value is returned.
+ */
+
+int adns_processreadable(adns_state ads, int fd, const struct timeval *now);
+int adns_processwriteable(adns_state ads, int fd, const struct timeval *now);
+int adns_processexceptional(adns_state ads, int fd, const struct timeval *now);
+/* Gives adns flow-of-control so that it can process incoming data
+ * from, or send outgoing data via, fd.  Very like _processany.  If it
+ * returns zero then fd will no longer be readable or writeable
+ * (unless of course more data has arrived since).  adns will _only_
+ * that fd and only in the manner specified, regardless of whether
+ * adns_if_noautosys was specified.
+ *
+ * adns_processexceptional should be called when select(2) reports an
+ * exceptional condition, or poll(2) reports POLLPRI.
+ *
+ * It is fine to call _processreabable or _processwriteable when the
+ * fd is not ready, or with an fd that doesn't belong to adns; it will
+ * then just return 0.
+ *
+ * If some error occurred which might prevent an event loop to spin
+ * then the errno value is returned.
+ */
+
+void adns_processtimeouts(adns_state ads, const struct timeval *now);
+/* Gives adns flow-of-control so that it can process any timeouts
+ * which might have happened.  Very like _processreadable/writeable.
+ *
+ * now may be 0; if it isn't, *now must be the current time, recently
+ * obtained from gettimeofday.
+ */
+
+void adns_firsttimeout(adns_state ads,
+		       struct timeval **tv_mod, struct timeval *tv_buf,
+		       struct timeval now);
+/* Asks adns when it would first like the opportunity to time
+ * something out.  now must be the current time, from gettimeofday.
+ * 
+ * If tv_mod points to 0 then tv_buf must be non-null, and
+ * _firsttimeout will fill in *tv_buf with the time until the first
+ * timeout, and make *tv_mod point to tv_buf.  If adns doesn't have
+ * anything that might need timing out it will leave *tv_mod as 0.
+ *
+ * If *tv_mod is not 0 then tv_buf is not used.  adns will update
+ * *tv_mod if it has any earlier timeout, and leave it alone if it
+ * doesn't.
+ *
+ * This call will not actually do any I/O, or change the fds that adns
+ * is using.  It always succeeds and never blocks.
+ */
+
+void adns_globalsystemfailure(adns_state ads);
+/* If serious problem(s) happen which globally affect your ability to
+ * interact properly with adns, or adns's ability to function
+ * properly, you or adns can call this function.
+ *
+ * All currently outstanding queries will be made to fail with
+ * adns_s_systemfail, and adns will close any stream sockets it has
+ * open.
+ *
+ * This is used by adns, for example, if gettimeofday() fails.
+ * Without this the program's event loop might start to spin !
+ *
+ * This call will never block.
+ */
+
+/*
+ * Entrypoints for select-loop based asynch io:
+ */
+
+void adns_beforeselect(adns_state ads, int *maxfd, fd_set *readfds,
+		       fd_set *writefds, fd_set *exceptfds,
+		       struct timeval **tv_mod, struct timeval *tv_buf,
+		       const struct timeval *now);
+/* Find out file descriptors adns is interested in, and when it would
+ * like the opportunity to time something out.  If you do not plan to
+ * block then tv_mod may be 0.  Otherwise, tv_mod and tv_buf are as
+ * for adns_firsttimeout.  readfds, writefds, exceptfds and maxfd_io may
+ * not be 0.
+ *
+ * If *now is not 0 then this will never actually do any I/O, or
+ * change the fds that adns is using or the timeouts it wants.  In any
+ * case it won't block.
+ */
+
+void adns_afterselect(adns_state ads, int maxfd, const fd_set *readfds,
+		      const fd_set *writefds, const fd_set *exceptfds,
+		      const struct timeval *now);
+/* Gives adns flow-of-control for a bit; intended for use after
+ * select.  This is just a fancy way of calling adns_processreadable/
+ * writeable/timeouts as appropriate, as if select had returned the
+ * data being passed.  Always succeeds.
+ */
+
+/*
+ * Example calling sequence:
  *
  *  adns_init _noautosys
  *  loop {
- *   adns_interest
+ *   adns_beforeselect
  *   select
- *   adns_callback
+ *   adns_afterselect
  *   ...
  *   adns_submit / adns_check
  *   ...
  *  }
  */
+
+/*
+ * Entrypoints for poll-loop based asynch io:
+ */
+
+struct pollfd;
+/* In case your system doesn't have it or you forgot to include
+ * <sys/poll.h>, to stop the following declarations from causing
+ * problems.  If your system doesn't have poll then the following
+ * entrypoints will not be defined in libadns.  Sorry !
+ */
+
+int adns_beforepoll(adns_state ads, struct pollfd *fds, int *nfds_io, int *timeout_io,
+		    const struct timeval *now);
+/* Finds out which fd's adns is interested in, and when it would like
+ * to be able to time things out.  This is in a form suitable for use
+ * with poll(2).
+ * 
+ * On entry, usually fds should point to at least *nfds_io structs.
+ * adns will fill up to that many structs will information for poll,
+ * and record in *nfds_io how many structs it filled.  If it wants to
+ * listen for more structs then *nfds_io will be set to the number
+ * required and _beforepoll will return ERANGE.
+ *
+ * You may call _beforepoll with fds==0 and *nfds_io 0, in which case
+ * adns will fill in the number of fds that it might be interested in
+ * in *nfds_io, and always return either 0 (if it is not interested in
+ * any fds) or ERANGE (if it is).
+ *
+ * NOTE that (unless timeout_io is 0) adns may acquire additional fds
+ * from one call to the next, so you must put adns_beforepoll in a
+ * loop, rather than assuming that the second call (with the buffer
+ * size requested by the first) will not return ERANGE.
+ *
+ * adns only ever sets POLLIN, POLLOUT and POLLPRI in its pollfd
+ * structs, and only ever looks at those bits.  POLLPRI is required to
+ * detect TCP Urgent Data (which should not be used by a DNS server)
+ * so that adns can know that the TCP stream is now useless.
+ *
+ * In any case, *timeout_io should be a timeout value as for poll(2),
+ * which adns will modify downwards as required.  If the caller does
+ * not plan to block then *timeout_io should be 0 on entry, or
+ * alternatively, timeout_io may be 0.  (Alternatively, the caller may
+ * use _beforeselect with timeout_io==0 to find out about file
+ * descriptors, and use _firsttimeout is used to find out when adns
+ * might want to time something out.)
+ *
+ * adns_beforepoll will return 0 on success, and will not fail for any
+ * reason other than the fds buffer being too small (ERANGE).
+ *
+ * This call will never actually do any I/O, or change the fds that
+ * adns is using or the timeouts it wants; and in any case it won't
+ * block.
+ */
+
+#define ADNS_POLLFDS_RECOMMENDED 2
+/* If you allocate an fds buf with at least RECOMMENDED entries then
+ * you are unlikely to need to enlarge it.  You are recommended to do
+ * so if it's convenient.  However, you must be prepared for adns to
+ * require more space than this.
+ */
+
+void adns_afterpoll(adns_state ads, const struct pollfd *fds, int nfds,
+		    const struct timeval *now);
+/* Gives adns flow-of-control for a bit; intended for use after
+ * poll(2).  fds and nfds should be the results from poll().  pollfd
+ * structs mentioning fds not belonging to adns will be ignored.
+ */
+
 
 adns_status adns_rr_info(adns_rrtype type,
 			 const char **rrtname_r, const char **fmtname_r,
@@ -356,5 +560,14 @@ adns_status adns_rr_info(adns_rrtype type,
  */
 
 const char *adns_strerror(adns_status st);
+const char *adns_errabbrev(adns_status st);
+/* Like strerror but for adns_status values.  adns_errabbrev returns
+ * the abbreviation of the error - eg, for adns_s_timeout it returns
+ * "timeout".  You MUST NOT call these functions with status values
+ * not returned by the same adns library.
+ */
 
+#ifdef __cplusplus
+} /* end of extern "C" */
+#endif
 #endif

@@ -1,0 +1,34 @@
+syscallr  close=OK
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  poll=0 fds=[{fd=4, events=POLLIN, revents=0}]
+syscallr  sendto=40
+syscallr  fcntl=OK
+syscallr  fcntl=~O_NONBLOCK&...
+syscallr  socket=4

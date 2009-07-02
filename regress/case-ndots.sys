@@ -1,4 +1,4 @@
-ndots
+ndots -,s
 :1 5/newsx.davenant 5/news.davenant 5/news.davenant.greenend.org.uk 5/trunc.test.iwj.relativity 5/trunx.test.iwj.relativity 5/test.iwj.relativity
  start 924365863.351594
  socket type=SOCK_DGRAM

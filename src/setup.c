@@ -444,6 +444,7 @@ static int init_begin(adns_state *ads_r, adns_initflags flags, FILE *diagfile) {
   LIST_INIT(ads->timew);
   LIST_INIT(ads->childw);
   LIST_INIT(ads->output);
+  ads->forallnext= 0;
   ads->nextid= 0x311f;
   ads->udpsocket= ads->tcpsocket= -1;
   adns__vbuf_init(&ads->tcpsend);
@@ -564,4 +565,30 @@ void adns_finish(adns_state ads) {
   adns__vbuf_free(&ads->tcpsend);
   adns__vbuf_free(&ads->tcprecv);
   free(ads);
+}
+
+void adns_forallqueries_begin(adns_state ads) {
+  ads->forallnext=
+    ads->timew.head ? ads->timew.head :
+    ads->childw.head ? ads->childw.head :
+    ads->output.head;
+}
+  
+adns_query adns_forallqueries_next(adns_state ads, void **context_r) {
+  adns_query qu, nqu;
+
+  nqu= ads->forallnext;
+  for (;;) {
+    qu= nqu;
+    if (!qu) return 0;
+    nqu=
+      qu->next ? qu->next :
+      qu == ads->timew.tail ? (ads->childw.head ? ads->childw.head : ads->output.head) :
+      qu == ads->childw.tail ? ads->output.head :
+      0;
+    if (!qu->parent) break;
+  }
+  ads->forallnext= nqu;
+  if (context_r) *context_r= qu->ctx.ext;
+  return qu;
 }

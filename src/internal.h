@@ -32,6 +32,7 @@ typedef unsigned char byte;
 #include <assert.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 #include <sys/time.h>
 
@@ -44,7 +45,6 @@ typedef unsigned char byte;
 #define UDPMAXRETRIES 15
 #define UDPRETRYMS 2000
 #define TCPMS 30000
-#define LOCALRESOURCEMS 20
 #define MAXTTLBELIEVE (7*86400) /* any TTL > 7 days is capped */
 
 #define DNS_PORT 53
@@ -55,6 +55,8 @@ typedef unsigned char byte;
 #define DNS_CLASS_IN 1
 
 #define DNS_INADDR_ARPA "in-addr", "arpa"
+
+#define MAX_POLLFDS  ADNS_POLLFDS_RECOMMENDED
 
 typedef enum {
   rcode_noerror,
@@ -156,7 +158,7 @@ struct adns__query {
   struct { allocnode *head, *tail; } allocations;
   int interim_allocd;
   void *final_allocspace;
-  
+
   const typeinfo *typei;
   byte *query_dgram;
   int query_dglen;
@@ -213,7 +215,10 @@ struct adns__query {
    *  tcpsent timew   null   >=0  irrelevant     zero        any
    *				  
    *  child   childw  set    >=0  irrelevant     irrelevant  irrelevant
+   *  child   NONE    null   >=0  irrelevant     irrelevant  irrelevant
    *  done    output  null   -1   irrelevant     irrelevant  irrelevant
+   *
+   * Queries are only not on a queue when they are actually being processed.
    *
    *			      +------------------------+
    *             START -----> |      udp/NONE          |
@@ -259,6 +264,7 @@ struct adns__state {
   FILE *diagfile;
   int configerrno;
   struct { adns_query head, tail; } timew, childw, output;
+  adns_query forallnext;
   int nextid, udpsocket, tcpsocket;
   vbuf tcpsend, tcprecv;
   int nservers, nsortlist, nsearchlist, searchndots, tcpserver;
@@ -266,6 +272,7 @@ struct adns__state {
   struct timeval tcptimeout;
   struct sigaction stdsigpipe;
   sigset_t stdsigmask;
+  struct pollfd pollfds_buf[MAX_POLLFDS];
   struct server {
     struct in_addr addr;
   } servers[MAXSERVERS];
@@ -378,6 +385,17 @@ adns_status adns__internal_submit(adns_state ads, adns_query *query_r,
  * succeeds or fails (if it succeeds, the vbuf is reused for qu->vb).
  *
  * *ctx is copied byte-for-byte into the query.
+ *
+ * When the child query is done, ctx->callback will be called.  The
+ * child will already have been taken off both the global list of
+ * queries in ads and the list of children in the parent.  The child
+ * will be freed when the callback returns.  The parent will have been
+ * taken off the global childw queue iff this is the last child for
+ * that parent.  If there is no error detected in the callback, then
+ * it should call adns__query_done if and only if there are no more
+ * children (by checking parent->children.head).  If an error is
+ * detected in the callback it should call adns__query_fail and any
+ * remaining children will automatically be cancelled.
  */
 
 void adns__search_next(adns_state ads, adns_query qu, struct timeval now);
@@ -584,10 +602,23 @@ int vbuf__append_quoted1035(vbuf *vb, const byte *buf, int len);
 /* From event.c: */
 
 void adns__tcp_broken(adns_state ads, const char *what, const char *why);
+void adns__tcp_closenext(adns_state ads);
 void adns__tcp_tryconnect(adns_state ads, struct timeval now);
 
 void adns__autosys(adns_state ads, struct timeval now);
 /* Make all the system calls we want to if the application wants us to. */
+
+void adns__must_gettimeofday(adns_state ads, const struct timeval **now_io,
+			     struct timeval *tv_buf);
+void adns__timeouts(adns_state ads, int act,
+		    struct timeval **tv_io, struct timeval *tvbuf,
+		    struct timeval now);
+int adns__pollfds(adns_state ads, struct pollfd pollfds_buf[MAX_POLLFDS]);
+void adns__fdevents(adns_state ads,
+		    const struct pollfd *pollfds, int npollfds,
+		    int maxfd, const fd_set *readfds,
+		    const fd_set *writefds, const fd_set *exceptfds,
+		    struct timeval now, int *r_r);
 
 /* Useful static inline functions: */
 
@@ -604,8 +635,10 @@ static inline void timevaladd(struct timeval *tv_io, long ms) {
 static inline int ctype_whitespace(int c) { return c==' ' || c=='\n' || c=='\t'; }
 static inline int ctype_digit(int c) { return c>='0' && c<='9'; }
 static inline int ctype_alpha(int c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' || c <= 'Z');
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
+
+static inline int errno_resources(int e) { return e==ENOMEM || e==ENOBUFS; }
 
 /* Useful macros */
 

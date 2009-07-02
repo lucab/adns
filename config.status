@@ -192,6 +192,9 @@ for ac_file in .. $CONFIG_HEADERS; do if test "x$ac_file" != x..; then
   cat $ac_file_inputs > conftest.in
 
   cat > conftest.frag <<CEOF
+${ac_dA}HAVE_POLL${ac_dB}HAVE_POLL${ac_dC}1${ac_dD}
+${ac_uA}HAVE_POLL${ac_uB}HAVE_POLL${ac_uC}1${ac_uD}
+${ac_eA}HAVE_POLL${ac_eB}HAVE_POLL${ac_eC}1${ac_eD}
 ${ac_dA}HAVE_GNUC25_ATTRIB${ac_dB}HAVE_GNUC25_ATTRIB${ac_dC}1${ac_dD}
 ${ac_uA}HAVE_GNUC25_ATTRIB${ac_uB}HAVE_GNUC25_ATTRIB${ac_uC}1${ac_uD}
 ${ac_eA}HAVE_GNUC25_ATTRIB${ac_eB}HAVE_GNUC25_ATTRIB${ac_eC}1${ac_eD}
@@ -201,15 +204,15 @@ ${ac_eA}HAVE_GNUC25_NORETURN${ac_eB}HAVE_GNUC25_NORETURN${ac_eC}1${ac_eD}
 ${ac_dA}HAVE_GNUC25_CONST${ac_dB}HAVE_GNUC25_CONST${ac_dC}1${ac_dD}
 ${ac_uA}HAVE_GNUC25_CONST${ac_uB}HAVE_GNUC25_CONST${ac_uC}1${ac_uD}
 ${ac_eA}HAVE_GNUC25_CONST${ac_eB}HAVE_GNUC25_CONST${ac_eC}1${ac_eD}
-${ac_dA}HAVE_GNUC25_PRINTFFORMAT${ac_dB}HAVE_GNUC25_PRINTFFORMAT${ac_dC}1${ac_dD}
-${ac_uA}HAVE_GNUC25_PRINTFFORMAT${ac_uB}HAVE_GNUC25_PRINTFFORMAT${ac_uC}1${ac_uD}
-${ac_eA}HAVE_GNUC25_PRINTFFORMAT${ac_eB}HAVE_GNUC25_PRINTFFORMAT${ac_eC}1${ac_eD}
 CEOF
   sed -f conftest.frag conftest.in > conftest.out
   rm -f conftest.in
   mv conftest.out conftest.in
 
   cat > conftest.frag <<CEOF
+${ac_dA}HAVE_GNUC25_PRINTFFORMAT${ac_dB}HAVE_GNUC25_PRINTFFORMAT${ac_dC}1${ac_dD}
+${ac_uA}HAVE_GNUC25_PRINTFFORMAT${ac_uB}HAVE_GNUC25_PRINTFFORMAT${ac_uC}1${ac_uD}
+${ac_eA}HAVE_GNUC25_PRINTFFORMAT${ac_eB}HAVE_GNUC25_PRINTFFORMAT${ac_eC}1${ac_eD}
 s%^[ 	]*#[ 	]*undef[ 	][ 	]*[a-zA-Z_][a-zA-Z_0-9]*%/* & */%
 CEOF
   sed -f conftest.frag conftest.in > conftest.out

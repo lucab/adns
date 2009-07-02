@@ -200,10 +200,11 @@ adns_status adns_rr_info(adns_rrtype type,
   return st;
 }
 
-#define SINFO(n,s) { adns_s_##n, s }
+#define SINFO(n,s) { adns_s_##n, #n, s }
 
 static const struct sinfo {
   adns_status st;
+  const char *abbrev;
   const char *string;
 } sinfos[]= {
   SINFO(  ok,                  "OK"                                            ),
@@ -244,16 +245,22 @@ static int si_compar(const void *key, const void *elem) {
   return *st < si->st ? -1 : *st > si->st ? 1 : 0;
 }
 
-const char *adns_strerror(adns_status st) {
-  static char buf[100];
+static const struct sinfo *findsinfo(adns_status st) {
+  return bsearch(&st,sinfos,sizeof(sinfos)/sizeof(*sinfos),sizeof(*sinfos),si_compar);
+}
 
+const char *adns_strerror(adns_status st) {
   const struct sinfo *si;
 
-  si= bsearch(&st,sinfos,sizeof(sinfos)/sizeof(*si),sizeof(*si),si_compar);
-  if (si) return si->string;
-  
-  snprintf(buf,sizeof(buf),"code %d",st);
-  return buf;
+  si= findsinfo(st);
+  return si->string;
+}
+
+const char *adns_errabbrev(adns_status st) {
+  const struct sinfo *si;
+
+  si= findsinfo(st);
+  return si->abbrev;
 }
 
 void adns__isort(void *array, int nobjs, int sz, void *tempbuf,

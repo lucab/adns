@@ -77,6 +77,7 @@ void Q$1(hm_args_massage($3,void)) {
  m4_define(`hm_arg_nullptr',`')
  m4_define(`hm_arg_int', `Tvbf(" $'`1=%d",$'`1);')
  m4_define(`hm_arg_fdset_io', `Tvbf(" $'`1="); Tvbfdset($'`2,$'`1);')
+ m4_define(`hm_arg_pollfds_io', `Tvbf(" $'`1="); Tvbpollfds($'`1,$'`2);')
  m4_define(`hm_arg_timeval_in_rel_null', `
   if ($'`1) Tvbf(" $'`1=%ld.%06ld",(long)$'`1->tv_sec,(long)$'`1->tv_usec);
   else Tvba(" $'`1=null");')
@@ -141,6 +142,33 @@ void Tvbfdset(int max, const fd_set *fds) {
     Tvba(comma);
     Tvbf("%d",i);
     comma= ",";
+  }
+  Tvba("]");
+}
+
+static void Tvbpollevents(int events) {
+  const char *delim= "";
+
+  events &= (POLLIN|POLLOUT|POLLPRI);
+  if (!events) { Tvba("0"); return; }
+  if (events & POLLIN) { Tvba("POLLIN"); delim= "|"; }
+  if (events & POLLOUT) { Tvba(delim); Tvba("POLLOUT"); delim= "|"; }
+  if (events & POLLPRI) { Tvba(delim); Tvba("POLLPRI"); }
+}
+
+void Tvbpollfds(const struct pollfd *fds, int nfds) {
+  const char *comma= "";
+  
+  Tvba("[");
+  while (nfds>0) {
+    Tvba(comma);
+    Tvbf("{fd=%d, events=",fds->fd);
+    Tvbpollevents(fds->events);
+    Tvba(", revents=");
+    Tvbpollevents(fds->revents);
+    Tvba("}");
+    comma= ", ";
+    nfds--; fds++;
   }
   Tvba("]");
 }

@@ -1,3 +1,30 @@
+adns (0.3) unstable; urgency=low
+
+  Incompatible changes:
+  * Low adns_status values (below adns_s_max_tempfail) renumbered to make
+    room for future locally-induced and locally-detected errors.
+  * Event loop functions for use by select(2) renamed and tidied up.
+  
+  Features / improvements:
+  * New adns_errabbrev() for getting status abbreviation strings.
+  * regress/checkall prints summary list of failed tests, if any.
+  * Event loop functions for poll(2), and some raw variants.
+  * adnstest has ability to use poll(2), and user can set initflags.
+  * checkall prints passed list as well as failed list, if any failed.
+  * You can iterate over outstanding queries (but only once at a time).
+  
+  Bugfixes:
+  * Non-RFC822 mailbox `domain' formatting now works, and clarified.
+  * Rejection of bad characters in domains (without quoteok) works.
+  * Clean up parents from adns->childw (otherwise would abort/segfault).
+  * In adnstest, allocate enough space for, and terminate, query types.
+  * In adnstest, don't print errno values as adns_status values.
+ 
+  * Added TODO file.
+  * Made adnstest.c test context pointers.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 15 Jul 1999 00:23:12 +0100
+
 adns (0.2) experimental; urgency=low
 
   Portability fixes for compilation on various platforms:

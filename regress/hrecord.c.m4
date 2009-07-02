@@ -120,6 +120,7 @@ int H$1(hm_args_massage($3,void)) {
 
  hm_create_nothing
  m4_define(`hm_arg_fdset_io',`Tvba(" $'`1="); Tvbfdset($'`2,$'`1);')
+ m4_define(`hm_arg_pollfds_io',`Tvba(" $'`1="); Tvbpollfds($'`1,$'`2);')
  m4_define(`hm_arg_addr_out',`Tvba(" $'`1="); Tvbaddr($'`1,*$'`2);')
  $3
 

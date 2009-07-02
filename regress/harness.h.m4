@@ -27,6 +27,7 @@ m4_include(hmacros.i4)
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <sys/poll.h>
 
 #include "internal.h"
 
@@ -62,6 +63,7 @@ void Tmust(const char *call, const char *arg, int cond);
 void Tvbf(const char *fmt, ...) PRINTFFORMAT(1,2);
 void Tvbvf(const char *fmt, va_list al);
 void Tvbfdset(int max, const fd_set *set);
+void Tvbpollfds(const struct pollfd *fds, int nfds);
 void Tvbaddr(const struct sockaddr *addr, int addrlen);
 void Tvbbytes(const void *buf, int len);
 void Tvberrno(int e);

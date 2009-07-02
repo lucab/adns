@@ -1,29 +1,32 @@
 #!/bin/sh
 
-allok=true
+failed=''
+passed=''
 
 for f in case-*.sys
 do
 	case="`echo \"$f\" | sed -e 's/^case-//; s/\.sys$//'`"
 	if ./r1test $case
 	then
-		:
+		passed="$passed $case"
 	else
 		echo
-		allok=false
+		failed="$failed $case"
 		echo
 	fi
 done
 
-if $allok
+if [ "x$failed" = x ]
 then
 	echo "
 all tests passed."
 	exit 0
 fi
 
-echo >&2 '
+echo >&2 "
 AT LEAST ONE TEST FAILED
-'
+passed tests:${passed:- NONE}
+failed tests:$failed
+"
 
 exit 1

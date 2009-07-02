@@ -27,7 +27,7 @@ include		$(srcdir)/../src/adns.make
 DIRCFLAGS=	-I$(srcdir)/../src
 
 HCPPFLAGS:= $(foreach F,			\
-	gettimeofday select			\
+	gettimeofday select poll		\
 	socket fcntl connect close		\
 	sendto recvfrom read write writev	\
 , -D$F=H$F)

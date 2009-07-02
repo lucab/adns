@@ -57,6 +57,12 @@ hm_syscall(
 ')
 
 hm_syscall(
+	poll, `hm_rv_any', `
+        hm_arg_pollfds_io(fds,nfds) hm_na
+	hm_arg_int(timeout) hm_na
+')
+
+hm_syscall(
 	socket, `hm_rv_fd', `
 	hm_arg_must(int,domain,AF_INET) hm_na
 	hm_arg_socktype(type) hm_na
