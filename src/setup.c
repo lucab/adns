@@ -63,6 +63,30 @@ static void addserverv4(adns_state ads, struct in_addr addr) {
   ads->nservers++;
 }
 
+static void addserverv6(adns_state ads, struct in6_addr addr) {
+  int i;
+  struct server *ss;
+  char buf[INET6_ADDRSTRLEN];
+
+  for (i=0; i<ads->nservers; i++) {
+    if ((ads->servers[i].sin_family == AF_INET6) && (ads->servers[i].addr6.s6_addr == addr.s6_addr)) {
+      adns__debug(ads,-1,0,"duplicate nameserver %s ignored", inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN*sizeof(char)));
+      return;
+    }
+  }
+
+  if (ads->nservers>=MAXSERVERS) {
+    adns__diag(ads,-1,0,"too many nameservers, ignoring %s", inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN*sizeof(char)));
+    return;
+  }
+
+  ss= ads->servers+ads->nservers;
+  ss->sin_family= AF_INET6;
+  ss->addr6= addr;
+  ads->nservers++;
+}
+
+
 static void freesearchlist(adns_state ads) {
   if (ads->nsearchlist) free(*ads->searchlist);
   free(ads->searchlist);
@@ -108,14 +132,15 @@ static void ccf_nameserver(adns_state ads, const char *fn,
 			   int lno, const char *buf) {
   struct in_addr ia4;
   struct in6_addr ia6;
-  
+  char ns_name[INET6_ADDRSTRLEN];
+
   if (!inet_aton(buf,&ia4)) {
-    if (!inet_pton(buf,&ia6)) {
+    if (!inet_pton(AF_INET6, buf,&ia6)) {
 	configparseerr(ads,fn,lno,"invalid nameserver address `%s'",buf);
 	return;
     }
     else {
-	adns__debug(ads,-1,0,"using nameserver %s",inet_ntop(ia6));
+	adns__debug(ads,-1,0,"using nameserver %s", inet_ntop(AF_INET6, &ia6, ns_name, INET6_ADDRSTRLEN*sizeof(char)));
 	addserverv6(ads,ia6);
 	
     }
