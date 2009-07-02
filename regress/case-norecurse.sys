@@ -161,10 +161,7 @@ default -0x16
  +0.002445
  read fd=5 buflen=686
  read=EAGAIN
- +0.003282
- close fd=5
- close=OK
- +0.000529
+ +0.003811
  sendto fd=4 addr=172.18.45.6:53
      31260100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 100001.
@@ -177,7 +174,10 @@ default -0x16
  +0.000256
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000116
+ +0.000115
+ read fd=5 buflen=686
+ read=EAGAIN
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31270100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 110001.
@@ -190,7 +190,10 @@ default -0x16
  +0.000259
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000113
+ +0.000112
+ read fd=5 buflen=686
+ read=EAGAIN
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31280100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 010001.
@@ -203,7 +206,10 @@ default -0x16
  +0.000259
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000125
+ +0.000124
+ read fd=5 buflen=686
+ read=EAGAIN
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      31290100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 020001.
@@ -216,7 +222,10 @@ default -0x16
  +0.000262
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000124
+ +0.000123
+ read fd=5 buflen=686
+ read=EAGAIN
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      312a0100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 0c0001.
@@ -240,22 +249,18 @@ default -0x16
      6dc03fc0 0c000c00 01000130 7c000704 6e657773 c196c00c 000c0001 0001307c
      0014036e 73320a69 6d616765 666f7275 6d02746d c07cc00c 000c0001 0001307c
      0007046e 657773c1 c6.
- +0.001723
- socket type=SOCK_STREAM
- socket=5
- +0.000993
- fcntl fd=5 cmd=F_GETFL
- fcntl=~O_NONBLOCK&...
- +0.000044
- fcntl fd=5 cmd=F_SETFL O_NONBLOCK|...
- fcntl=OK
- +0.000039
- connect fd=5 addr=172.18.45.6:53
- connect=EINPROGRESS
- +0.000436
+ +0.001724
+ write fd=5
+     002b312a 01000001 00000000 00000134 03323034 02353003 31353807 696e2d61
+     64647204 61727061 00000c00 01.
+ write=45
+ +0.001513
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000079
+ +0.000078
+ read fd=5 buflen=686
+ read=EAGAIN
+ +0.000001
  sendto fd=4 addr=172.18.45.6:53
      312b0100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 0f0001.
@@ -269,14 +274,9 @@ default -0x16
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
  +0.000118
- read fd=5 buflen=1
+ read fd=5 buflen=686
  read=EAGAIN
- +0.000068
- write fd=5
-     002b312a 01000001 00000000 00000134 03323034 02353003 31353807 696e2d61
-     64647204 61727061 00000c00 01.
- write=45
- +0.001361
+ +0.001429
  sendto fd=4 addr=172.18.45.6:53
      312c0100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 060001.
@@ -425,10 +425,7 @@ default -0x16
  +0.001187
  read fd=5 buflen=686
  read=EAGAIN
- +0.000096
- close fd=5
- close=OK
- +0.000598
+ +0.000694
  sendto fd=4 addr=172.18.45.6:53
      31440100 00010000 00000000 01340332 30340235 30033135 3807696e 2d616464
      72046172 70610000 110001.
@@ -616,8 +613,11 @@ default -0x16
  +0.000317
  recvfrom fd=4 buflen=512 *addrlen=16
  recvfrom=EAGAIN
- +0.000116
- select max=5 rfds=[4] wfds=[] efds=[] to=1.920611
+ +0.000001
+ read fd=5 buflen=686
+ read=EAGAIN
+ +0.000115
+ select max=6 rfds=[4,5] wfds=[] efds=[5] to=1.920609
  select=1 rfds=[4] wfds=[] efds=[]
  +1.-754319
  recvfrom fd=4 buflen=512 *addrlen=16
@@ -631,3 +631,6 @@ default -0x16
  close fd=4
  close=OK
  +0.000208
+ close fd=5
+ close=OK
+ +0.000001

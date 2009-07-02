@@ -248,7 +248,7 @@ void adns__query_send(adns_query qu, struct timeval now) {
   r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
 	    (const struct sockaddr*)&servaddr,sizeof(servaddr));
   if (r<0 && errno == EMSGSIZE) { qu->retries= 0; query_usetcp(qu,now); return; }
-  if (r<0) adns__warn(ads,serv,0,"sendto failed: %s",strerror(errno));
+  if (r<0 && errno != EAGAIN) adns__warn(ads,serv,0,"sendto failed: %s",strerror(errno));
   
   qu->timeout= now;
   timevaladd(&qu->timeout,UDPRETRYMS);

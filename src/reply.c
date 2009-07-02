@@ -126,7 +126,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
     if (qu) adns__query_fail(qu,adns_s_rcodenotimplemented);
     return;
   case rcode_refused:
-    adns__warn(ads,serv,qu,"server refused our query");
+    adns__debug(ads,serv,qu,"server refused our query");
     if (qu) adns__query_fail(qu,adns_s_rcoderefused);
     return;
   default:
@@ -287,7 +287,7 @@ void adns__procdgram(adns_state ads, const byte *dgram, int dglen,
       if (!flg_rd)
 	adns__diag(ads,serv,qu,"server thinks we didn't ask for recursive lookup");
       else
-	adns__diag(ads,serv,qu,"server claims to do recursion, but gave us a referral");
+	adns__debug(ads,serv,qu,"server claims to do recursion, but gave us a referral");
       adns__query_fail(qu,adns_s_invalidresponse);
     }
     return;

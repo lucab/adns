@@ -1,3 +1,35 @@
+adns (0.9) unstable; urgency=high
+
+  Bug fixes:
+  * Don't make _processany always kill the TCP connection with the message
+    `TCP connection failed: poll/select: exceptional condition detected'.
+  * Call MEM_ROUND in __transfer_interim (avoids assert fail
+    `qu->interim_allocd>=0' on some platforms eg 64 bit).
+  * adnsresfilter doesn't resolve textual prefixes of addresses (eg,
+    10.0.0.1 out of 10.0.0.123) if input happens to block at that point.
+  * Do not spin if TCP connection blocks for writing (and add test case).
+  * Fail queries if TCP dies repeatedly, rather than retrying many times.
+  * Do not abort in a couple of places if TCP unexpectedly broken.
+  * Do not free something twice if query fails and is then cancelled.
+
+  Portability/compilation fixes:
+  * Move `extern "C" {' to after #include <...>'s.
+  * Pass LDFLAGS from configure on to ld via settings.make.in.
+  * make clean deletes *.so and *.so.* files.
+  * New --disable-dynamic configure option for non-ELF systems.
+  * Use AC_PROG_INSTALL (=> perhaps install-sh), to avoid bad `install'.
+
+  Minor improvements:
+  * Do not print warning if sendto() gives EAGAIN.
+  * adnsresfilter default timeout changed to 1000ms.
+  * m1test script can invoke `hrecord' differently.
+  * regress/output-<case>.report file contains more useful info.
+  * TODO list and other docs updated slightly.
+  * Referrals with RD+RA set, or RCODE=Refused, don't generate warnings,
+    just debug messages.  BIND does this kind of thing all the time.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed,  9 Aug 2000 16:59:28 +0100
+
 adns (0.8) BETA; urgency=medium
 
   Bugfixes:

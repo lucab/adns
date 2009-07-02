@@ -232,6 +232,8 @@ int main(int argc, char *const *argv) {
   }
   if (r) failure_errno("init",r);
 
+  setvbuf(stdout,0,_IOLBF,0);
+  
   for (qi=0; qi<qc; qi++) {
     fdom_split(fdomlist[qi],&domain,&qflags,ownflags,sizeof(ownflags));
     if (!consistsof(ownflags,"a")) usageerr("unknown ownqueryflag");

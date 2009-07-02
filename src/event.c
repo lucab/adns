@@ -54,10 +54,17 @@ static void tcp_close(adns_state ads) {
 
 void adns__tcp_broken(adns_state ads, const char *what, const char *why) {
   int serv;
+  adns_query qu;
   
   assert(ads->tcpstate == server_connecting || ads->tcpstate == server_ok);
   serv= ads->tcpserver;
   if (what) adns__warn(ads,serv,0,"TCP connection failed: %s: %s",what,why);
+
+  if (ads->tcpstate == server_connecting) {
+    /* Counts as a retry for all the queries waiting for TCP. */
+    for (qu= ads->tcpw.head; qu; qu= qu->next)
+      qu->retries++;
+  }
 
   tcp_close(ads);
   ads->tcpstate= server_broken;
@@ -328,6 +335,7 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
 
   switch (ads->tcpstate) {
   case server_disconnected:
+  case server_broken:
   case server_connecting:
     break;
   case server_ok:
@@ -425,6 +433,7 @@ int adns_processwriteable(adns_state ads, int fd, const struct timeval *now) {
 
   switch (ads->tcpstate) {
   case server_disconnected:
+  case server_broken:
     break;
   case server_connecting:
     if (fd != ads->tcpsocket) break;
@@ -447,8 +456,8 @@ int adns_processwriteable(adns_state ads, int fd, const struct timeval *now) {
       r= 0; goto xit;
     } /* not reached */
   case server_ok:
-    if (!(ads->tcpsend.used && fd == ads->tcpsocket)) break;
-    for (;;) {
+    if (fd != ads->tcpsocket) break;
+    while (ads->tcpsend.used) {
       adns__sigpipe_protect(ads);
       r= write(ads->tcpsocket,ads->tcpsend.buf,ads->tcpsend.used);
       adns__sigpipe_unprotect(ads);
@@ -462,7 +471,9 @@ int adns_processwriteable(adns_state ads, int fd, const struct timeval *now) {
 	ads->tcpsend.used -= r;
 	memmove(ads->tcpsend.buf,ads->tcpsend.buf+r,ads->tcpsend.used);
       }
-    } /* not reached */
+    }
+    r= 0;
+    goto xit;
   default:
     abort();
   }
@@ -476,6 +487,7 @@ int adns_processexceptional(adns_state ads, int fd, const struct timeval *now) {
   adns__consistency(ads,0,cc_entex);
   switch (ads->tcpstate) {
   case server_disconnected:
+  case server_broken:
     break;
   case server_connecting:
   case server_ok:
@@ -596,6 +608,7 @@ void adns_globalsystemfailure(adns_state ads) {
     adns__tcp_broken(ads,0,0);
     break;
   case server_disconnected:
+  case server_broken:
     break;
   default:
     abort();
@@ -619,7 +632,7 @@ int adns_processany(adns_state ads) {
    * likely just to want to do a read on one or two fds anyway.
    */
   npollfds= adns__pollfds(ads,pollfds);
-  for (i=0; i<npollfds; i++) pollfds[i].revents= pollfds[i].events;
+  for (i=0; i<npollfds; i++) pollfds[i].revents= pollfds[i].events & ~POLLPRI;
   adns__fdevents(ads,
 		 pollfds,npollfds,
 		 0,0,0,0,

@@ -51,14 +51,11 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  *
- *  $Id: adns.h,v 1.79 2000/05/07 22:37:18 ian Exp $
+ *  $Id: adns.h,v 1.80 2000/05/09 21:50:50 ian Exp $
  */
 
 #ifndef ADNS_H_INCLUDED
 #define ADNS_H_INCLUDED
-#ifdef __cplusplus
-extern "C" { /* I really dislike this - iwj. */
-#endif
 
 #include <stdio.h>
 
@@ -67,6 +64,10 @@ extern "C" { /* I really dislike this - iwj. */
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
+
+#ifdef __cplusplus
+extern "C" { /* I really dislike this - iwj. */
+#endif
 
 /* All struct in_addr anywhere in adns are in NETWORK byte order. */
 

@@ -2,7 +2,7 @@
 #  used by autoconf/configure to generate settings.make
 #  
 #  This file is
-#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+#    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 #
 #  It is part of adns, which is
 #    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
@@ -30,8 +30,10 @@ SHLIBFORLINK=	@SHLIBFORLINK@
 
 CC=		@CC@
 CFLAGS=		$(AUTOCFLAGS) $(WARNS) $(WERROR) $(DIRCFLAGS) $(XCFLAGS)
+LDFLAGS=	$(AUTOLDFLAGS) $(DIRLDFLAGS) $(XLDFLAGS)
 LDLIBS=		@LIBS@ $(XLIBS)
 AUTOCFLAGS=	@CFLAGS@
+AUTOLDFLAGS=	@LDFLAGS@
 WARNS=		@WARNS@
 #WERROR=	-Werror
 
@@ -50,14 +52,14 @@ bin_dir=	$(exec_prefix)/bin
 lib_dir=	$(exec_prefix)/lib
 include_dir=	$(prefix)/include
 
-INSTALL=		install -c
+INSTALL=		@INSTALL@
 INSTALL_PROGRAM=	$(INSTALL) -m 755 $(INSTALL_PROGRAM_FLAGS)
 INSTALL_DATA=		$(INSTALL) -m 644
 
 all:			$(TARGETS)
 
 clean mostlyclean:
-		rm -f *.o *.tmp*
+		rm -f *.o *.tmp* *.so *.so.*
 
 distclean:		clean
 		rm -f $(TARGETS) *~ ./#*# core *.orig *.rej Makefile

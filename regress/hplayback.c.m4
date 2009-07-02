@@ -253,6 +253,7 @@ static int Pbytes(byte *buf, int maxlen) {
   
 void Q_vb(void) {
   int r;
+  const char *nl;
 
   Tensureinputfile();
   if (!adns__vbuf_ensure(&vb2,vb.used+2)) Tnomem();
@@ -272,6 +273,9 @@ void Q_vb(void) {
             vb.used,vb.buf, vb.used,vb2.buf+1);
     exit(1);
   }
+  Tensurereportfile();
+  nl= memchr(vb.buf,'\n',vb.used);
+  fprintf(Treportfile," %.*s\n", (int)(nl ? nl - (const char*)vb.buf : vb.used), vb.buf);
 }
 
 m4_define(`hm_syscall', `
@@ -300,7 +304,7 @@ int H$1(hm_args_massage($3,void)) {
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
 
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!=hm_squote\nhm_squote)
   Psyntax("badly formed line");

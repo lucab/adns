@@ -23,6 +23,7 @@ const struct Terrno Terrnos[]= {
   { "ENOSPC",                    ENOSPC                       },
   { "EWOULDBLOCK",               EWOULDBLOCK                  },
   { "EHOSTUNREACH",              EHOSTUNREACH                 },
+  { "ECONNRESET",                ECONNRESET                   },
   { "ECONNREFUSED",              ECONNREFUSED                 },
   { "EPIPE",                     EPIPE                        },
   {  0,                          0                            }

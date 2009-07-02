@@ -190,6 +190,7 @@ static int Pbytes(byte *buf, int maxlen) {
 }
 void Q_vb(void) {
   int r;
+  const char *nl;
   Tensureinputfile();
   if (!adns__vbuf_ensure(&vb2,vb.used+2)) Tnomem();
   r= fread(vb2.buf,1,vb.used+2,Tinputfile);
@@ -208,6 +209,9 @@ void Q_vb(void) {
             vb.used,vb.buf, vb.used,vb2.buf+1);
     exit(1);
   }
+  Tensurereportfile();
+  nl= memchr(vb.buf,'\n',vb.used);
+  fprintf(Treportfile," %.*s\n", (int)(nl ? nl - (const char*)vb.buf : vb.used), vb.buf);
 }
 int Hselect(
 	int max , fd_set *rfds , fd_set *wfds , fd_set *efds , struct timeval *to 
@@ -220,7 +224,7 @@ int Hselect(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -256,7 +260,7 @@ int Hpoll(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -292,7 +296,7 @@ int Hsocket(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -330,7 +334,7 @@ int Hfcntl(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -375,7 +379,7 @@ int Hconnect(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -406,7 +410,7 @@ int Hclose(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -439,7 +443,7 @@ int Hsendto(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -472,7 +476,7 @@ int Hrecvfrom(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -505,7 +509,7 @@ int Hread(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");
@@ -538,7 +542,7 @@ int Hwrite(
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
  fgets(vb2.buf,vb2.avail,Tinputfile); Pcheckinput();
  Tensurereportfile();
- fprintf(Treportfile,"syscallr %s",vb2.buf);
+ fprintf(Treportfile,"%s",vb2.buf);
  amtread= strlen(vb2.buf);
  if (amtread<=0 || vb2.buf[--amtread]!='\n')
   Psyntax("badly formed line");

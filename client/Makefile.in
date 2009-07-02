@@ -1,7 +1,7 @@
 # client/Makefile - client program(s) Makefile
 # 
 #  This file is
-#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+#    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 #
 #  It is part of adns, which is
 #    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
@@ -24,14 +24,27 @@
 srcdir=		@srcdir@
 VPATH=		@srcdir@
 
-PROGS_SYSDEP=		@PROGS_HAVE_TSEARCH@
+PROGS_SYSDEP=	@PROGS_HAVE_TSEARCH@
+ENABLE_DYNAMIC=	@ENABLE_DYNAMIC@
 
 PROGRAMS=	adnstest adnslogres adnshost $(PROGS_SYSDEP)
 PROGRAMS_LOCAL=	fanftest
 PROGRAMS_ALL=	$(PROGRAMS) $(PROGRAMS_LOCAL)
 
+STATIC_LIB=	$(ADNSDIR)/libadns.a
+
+ifeq ($(ENABLE_DYNAMIC),elf)
+DYNAMIC_DEP=	$(srcdir)/../dynamic/$(SHLIBFILE)
+DYNAMIC_LINK=	-L$(srcdir)/../dynamic -ladns
+DYNAMIC_SUFFIX=	_s
+else
+DYNAMIC_DEP=	$(STATIC_LIB)
+DYNAMIC_LINK=	$(STATIC_LIB)
+DYNAMIC_SUFFIX=
+endif
+
 TARG_INSTALL=	$(PROGRAMS)
-TARG_LOCAL=	$(addsuffix _s, $(PROGRAMS_ALL))
+TARG_LOCAL=	$(addsuffix $(DYNAMIC_SUFFIX), $(PROGRAMS_ALL))
 TARGETS=	$(TARG_LOCAL) $(TARG_INSTALL)
 include		$(srcdir)/../settings.make
 
@@ -42,10 +55,6 @@ ADH_OBJS=	adh-main.o adh-opts.o adh-query.o
 ALL_OBJS=	$(ADH_OBJS) $(TARG_OBJS)
 
 ADNSDIR=	$(srcdir)/../src/
-
-STATIC_LIB=	$(ADNSDIR)/libadns.a
-DYNAMIC_DEP=	$(srcdir)/../dynamic/$(SHLIBFILE)
-DYNAMIC_LINK=	-L$(srcdir)/../dynamic -ladns
 
 all:		$(TARGETS)
 

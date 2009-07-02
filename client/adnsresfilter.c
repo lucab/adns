@@ -50,7 +50,7 @@ struct outqueuenode {
 };
 
 static int bracket, forever, address;
-static unsigned long timeout=100;
+static unsigned long timeout= 1000;
 static adns_rrtype rrt= adns_r_ptr;
 
 static int outblocked, inputeof;
@@ -369,7 +369,6 @@ static void readstdin(void) {
       if (!bracket && !isalnum(c)) startaddr();
     }
   }
-  if (cbyte==3 && inbyte>0 && !bracket) procaddr();
 }
 
 static void startup(void) {

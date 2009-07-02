@@ -2,7 +2,7 @@
 # Makefile - top-level Makefile
 #  
 #  This file is
-#    Copyright (C) 1997-1999 Ian Jackson <ian@davenant.greenend.org.uk>
+#    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
 #
 #  It is part of adns, which is
 #    Copyright (C) 1997-2000 Ian Jackson <ian@davenant.greenend.org.uk>
@@ -22,10 +22,17 @@
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
 
-DISTVERSION=	0.8
+DISTVERSION=	0.9
 srcdir=		.
 
-SUBDIRS= src dynamic client regress
+ENABLE_DYNAMIC=	yes
+ifeq ($(ENABLE_DYNAMIC),elf)
+SUBDIRS_DYNAMIC=dynamic
+else
+SUBDIRS_DYNAMIC=
+endif
+
+SUBDIRS= src $(SUBDIRS_DYNAMIC) client regress
 
 all install uninstall clean distclean mostlyclean maintainer-clean distprep:
 	set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
