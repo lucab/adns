@@ -1,0 +1,9 @@
+adns (0.1) experimental; urgency=low
+
+  * Initial public alpha release.
+
+ --
+
+Local variables:
+mode: debian-changelog
+End:

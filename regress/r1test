@@ -1,0 +1,38 @@
+#!/bin/sh
+# usage: r1test <testcasename>
+
+set -e
+casename="$1"
+case="case-$casename"
+ocase="output-$casename"
+
+exec <"$case.sys"
+read initfile
+read queryargs
+
+initstring="`cat init-$initfile.text`"
+
+rm -f $ocase.*
+
+set +e
+ADNS_TEST_REPORT_FD=3 3>>"$ocase.report" >"$ocase.out" 2>"$ocase.err" \
+ ./hplayback "/$initstring" $queryargs
+rc=$?
+set -e
+
+echo "rc=$rc" >>$ocase.out
+
+for part in out err
+do
+	if diff -u -- "$case.$part" "$ocase.$part"
+	then
+		:
+	else
+		echo >&2 "FAILED $case - WRONG OUTPUT"
+		exit 2
+	fi
+done
+
+echo -n "$casename "
+
+exit 0

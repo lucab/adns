@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -e
+
+if [ $# -lt 3 ]
+then
+	echo >&2 'usage: m1test <name> <initfile> <queryargs>'
+	exit 1
+fi
+
+case="case-$1"; shift
+initfile="$1"; shift
+queryargs="$*"
+
+initstring="`cat init-$initfile.text`"
+
+echo "$initfile" >"$case.sys"
+echo "$queryargs" >>"$case.sys"
+
+echo running "hrecord /... $queryargs"
+set +e
+ADNS_TEST_OUT_FD=3 3>>"$case.sys" >"$case.out" 2>"$case.err" </dev/null \
+ ./hrecord "/$initstring" $queryargs
+rc=$?
+set -e
+
+echo "rc=$rc" >>$case.out
+
+egrep . -- "$case.err" "$case.out"
+echo "exit status: $rc"

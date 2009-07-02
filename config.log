@@ -1,0 +1,19 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:526: checking for gcc
+configure:603: checking whether the C compiler (gcc  ) works
+configure:617: gcc -o conftest    conftest.c  1>&5
+configure:637: checking whether the C compiler (gcc  ) is a cross-compiler
+configure:642: checking whether we are using GNU C
+configure:651: gcc -E conftest.c
+configure:666: checking whether gcc accepts -g
+configure:696: checking for ranlib
+configure:725: checking __attribute__((,,))
+configure:738: gcc -c -g -O2  conftest.c 1>&5
+configure:760: checking __attribute__((noreturn))
+configure:773: gcc -c -g -O2  conftest.c 1>&5
+configure:800: checking __attribute__((const))
+configure:813: gcc -c -g -O2  conftest.c 1>&5
+configure:840: checking __attribute__((format...))
+configure:853: gcc -c -g -O2  conftest.c 1>&5

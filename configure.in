@@ -1,0 +1,50 @@
+# configure.in - input to autoconf
+#  
+#  This file is part of adns, which is Copyright (C) 1997-1999 Ian Jackson
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2, or (at your option)
+#  any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
+
+AC_INIT(src/adns.h)
+AC_CONFIG_HEADER(src/config.h)
+AC_PROG_CC
+AC_PROG_RANLIB
+ADNS_C_GCCATTRIB
+
+AC_SUBST(WARNS)
+
+if test "${GCC-no}" = yes; then
+	WARNS="-Wall -Wmissing-prototypes -Wwrite-strings -Wstrict-prototypes -Wcast-qual -Wpointer-arith"
+else
+	WARNS=
+fi
+
+AC_SUBST(SHLIBCC)
+AC_SUBST(MKSHLIB_1)
+AC_SUBST(MKSHLIB_2)
+AC_SUBST(MKSHLIB_3)
+AC_SUBST(SHLIBFILE)
+AC_SUBST(SHLIBSONAME)
+
+SHLIBCC='$(CC) $(CFLAGS) -fpic'
+MKSHLIB_1='$(CC) $(LDFLAGS) -shared -Wxl,soname=$(SONAME) -o'
+MKSHLIB_2=''
+MKSHLIB_3='-lc'
+SHLIBFILE='libadns.so.$(MAJOR).$(MINOR)'
+SHLIBSONAME='libadns.so.$(MAJOR)'
+
+AC_OUTPUT(
+	settings.make Makefile
+	src/Makefile client/Makefile dynamic/Makefile regress/Makefile
+)
