@@ -33,7 +33,7 @@
  */
 
 static const char * const cvsid =
-	"$Id: adnslogres.c,v 1.22 2006/04/08 14:36:57 ian Exp $";
+	"$Id: adnslogres.c,v 1.23 2006/05/09 19:37:58 ian Exp $";
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -154,7 +154,7 @@ static logline *readline(FILE *inf, adns_state adns, int opts) {
     strcpy(line->start, buf);
     str= ipaddr2domain(line->start, &line->addr, &line->rest);
     if (opts & OPT_DEBUG)
-      msg("submitting %.*s -> %s", line->rest-line->addr, guard_null(line->addr), str);
+      msg("submitting %.*s -> %s", (int)(line->rest-line->addr), guard_null(line->addr), str);
     if (adns_submit(adns, str, adns_r_ptr,
 		    adns_qf_quoteok_cname|adns_qf_cname_loose,
 		    NULL, &line->query))
@@ -186,7 +186,7 @@ static void proclog(FILE *inf, FILE *outf, int maxpending, int opts) {
     while (head) {
       if (opts & OPT_DEBUG)
 	msg("%d in queue; checking %.*s", len,
-	    head->rest-head->addr, guard_null(head->addr));
+	    (int)(head->rest-head->addr), guard_null(head->addr));
       if (eof || len >= maxpending) {
 	if (opts & OPT_POLL)
 	  err= adns_wait_poll(adns, &head->query, &answer, NULL);

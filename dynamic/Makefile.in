@@ -30,13 +30,13 @@ include		$(srcdir)/../src/adns.make
 ALLOBJS=	$(addsuffix _p.o, $(basename $(LIBOBJS)))
 
 install:
-		mkdir -p $(lib_dir)
-		$(INSTALL_PROGRAM) $(SHLIBFILE) $(lib_dir)/$(SHLIBFILE)
-		ln -sf $(SHLIBFILE) $(lib_dir)/$(SHLIBSONAME)
-		ln -sf $(SHLIBSONAME) $(lib_dir)/$(SHLIBFORLINK)
+		mkdir -p $(libdir)
+		$(INSTALL_PROGRAM) $(SHLIBFILE) $(libdir)/$(SHLIBFILE)
+		ln -sf $(SHLIBFILE) $(libdir)/$(SHLIBSONAME)
+		ln -sf $(SHLIBSONAME) $(libdir)/$(SHLIBFORLINK)
 
 uninstall:
-		rm -f $(lib_dir)/$(SHLIBFILE) $(lib_dir)/$(SHLIBSONAME)
+		rm -f $(libdir)/$(SHLIBFILE) $(libdir)/$(SHLIBSONAME)
 
 $(SHLIBFORLINK):
 		ln -s $(SHLIBSONAME) $(SHLIBFORLINK)

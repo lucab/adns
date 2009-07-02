@@ -168,10 +168,11 @@ adns_status adns__findrr_anychk(adns_query qu, int serv,
 				int *rdlen_r, int *rdstart_r,
 				const byte *eo_dgram, int eo_dglen,
 				int eo_cbyte, int *eo_matched_r) {
-  findlabel_state fls, eo_fls;
+  findlabel_state fls, eo_fls_buf;
+  findlabel_state *eo_fls; /* 0 iff we know it's not matching eo_... */
   int cbyte;
   
-  int tmp, rdlen, mismatch;
+  int tmp, rdlen;
   unsigned long ttl;
   int lablen, labstart, ch;
   int eo_lablen, eo_labstart, eo_ch;
@@ -181,11 +182,11 @@ adns_status adns__findrr_anychk(adns_query qu, int serv,
 
   adns__findlabel_start(&fls,qu->ads, serv,qu, dgram,dglen,dglen,cbyte,&cbyte);
   if (eo_dgram) {
-    adns__findlabel_start(&eo_fls,qu->ads, -1,0,
+    eo_fls= &eo_fls_buf;
+    adns__findlabel_start(eo_fls,qu->ads, -1,0,
 			  eo_dgram,eo_dglen,eo_dglen,eo_cbyte,0);
-    mismatch= 0;
   } else {
-    mismatch= 1;
+    eo_fls= 0;
   }
   
   for (;;) {
@@ -193,19 +194,19 @@ adns_status adns__findrr_anychk(adns_query qu, int serv,
     if (st) return st;
     if (lablen<0) goto x_truncated;
 
-    if (!mismatch) {
-      st= adns__findlabel_next(&eo_fls,&eo_lablen,&eo_labstart);
+    if (eo_fls) {
+      st= adns__findlabel_next(eo_fls,&eo_lablen,&eo_labstart);
       assert(!st); assert(eo_lablen>=0);
-      if (lablen != eo_lablen) mismatch= 1;
-      while (!mismatch && eo_lablen-- > 0) {
+      if (lablen != eo_lablen) eo_fls= 0;
+      while (eo_fls && eo_lablen-- > 0) {
 	ch= dgram[labstart++]; if (ctype_alpha(ch)) ch &= ~32;
 	eo_ch= eo_dgram[eo_labstart++]; if (ctype_alpha(eo_ch)) eo_ch &= ~32;
-	if (ch != eo_ch) mismatch= 1;
+	if (ch != eo_ch) eo_fls= 0;
       }
     }
     if (!lablen) break;
   }
-  if (eo_matched_r) *eo_matched_r= !mismatch;
+  if (eo_matched_r) *eo_matched_r= !!eo_fls;
    
   if (cbyte+10>dglen) goto x_truncated;
   GET_W(cbyte,tmp); *type_r= tmp;

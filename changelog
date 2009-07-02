@@ -1,3 +1,21 @@
+adns (1.3); urgency=low
+
+  Portability fixes:
+  * Cast ptrdiff_t to int for %.*s length in adnsheloex and adnslogres,
+    as is required.  (Report from Jim Meyering.)
+  * In configure.in, quote macro name argument to define() to
+    suppress spurious autoconf error.  (Report from Mihai Ibanescu.)
+  * Use autoconf's values for {bin,lib,include}dir rather than inventing
+    our own from @exec_prefix@, making configure --libdir work.
+    (Patch from Mihai Ibanescu.)
+  * Remove spurious `_' from {bin,lib,include}dir Makefile variables.
+    (Report from Mihai Ibanescu.)
+  * Do away with `mismatch' variable in parse.c:adns__findrr_anychk so that
+    overzealous GCC cannot complain about members of eo_fls being
+    uninitialised.  (Report from Jim Meyering.)
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Tue,  6 Jun 2006 20:22:30 +0100
+
 adns (1.2); urgency=medium
 
   New features:

@@ -22,7 +22,7 @@
 #  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
 
 MAJOR=		1
-MINOR=		2
+MINOR=		3
 SHLIBFILE=	@SHLIBFILE@
 SHLIBSONAME=	@SHLIBSONAME@
 SHLIBFORLINK=	@SHLIBFORLINK@
@@ -47,9 +47,9 @@ MKSHLIB_3=	@MKSHLIB_3@
 
 prefix=		@prefix@
 exec_prefix=	@exec_prefix@
-bin_dir=	$(exec_prefix)/bin
-lib_dir=	$(exec_prefix)/lib
-include_dir=	$(prefix)/include
+bindir=		@bindir@
+libdir=		@libdir@
+includedir=	@includedir@
 
 AC_INSTALL=	@INSTALL@
 ifeq ($(AC_INSTALL),./install-sh -c)

@@ -58,12 +58,12 @@ ADNSDIR=	$(srcdir)/../src/
 all:		$(TARGETS)
 
 install:	$(TARG_INSTALL)
-		mkdir -p $(bin_dir)
+		mkdir -p $(bindir)
 		set -xe; for f in $(TARG_INSTALL); \
-			do $(INSTALL_PROGRAM) $$f $(bin_dir)/$$f; done
+			do $(INSTALL_PROGRAM) $$f $(bindir)/$$f; done
 
 uninstall:
-		for f in $(TARGETS); do rm -f $(bin_dir)/$$f; done
+		for f in $(TARGETS); do rm -f $(bindir)/$$f; done
 
 adnshost:	$(ADH_OBJS) $(DYNAMIC_DEP)
 		$(CC) $(LDFLAGS) $(ADH_OBJS) $(DYNAMIC_LINK) -o $@ $(LDLIBS)

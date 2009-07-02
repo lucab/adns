@@ -30,7 +30,7 @@
  */
 
 static const char * const cvsid =
-	"$Id: adnsheloex.c,v 1.2 2006/04/08 14:36:57 ian Exp $";
+	"$Id: adnsheloex.c,v 1.3 2006/05/09 19:37:58 ian Exp $";
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -168,7 +168,7 @@ static void proclog(FILE *inf, FILE *outf, int maxpending, int opts) {
       if (head->query) {
 	if (opts & OPT_DEBUG)
 	  msg("%d in queue; checking %.*s", len,
-	      head->rest-head->name, guard_null(head->name));
+	      (int)(head->rest-head->name), guard_null(head->name));
 	if (eof || len >= maxpending) {
 	  if (opts & OPT_POLL)
 	    err= adns_wait_poll(adns, &head->query, &answer, NULL);
@@ -185,7 +185,7 @@ static void proclog(FILE *inf, FILE *outf, int maxpending, int opts) {
 	if (answer->status == adns_s_ok) {
 	  const char *addr;
 	  int ok = 0;
-	  fprintf(outf, "%.*s", head->rest-head->start, head->start);
+	  fprintf(outf, "%.*s", (int)(head->rest-head->start), head->start);
 	  while(answer->nrrs--) {
 	    addr= inet_ntoa(answer->rrs.inaddr[answer->nrrs]);
 	    ok |= !strncmp(addr, head->addr, strlen(addr));
