@@ -124,7 +124,7 @@ void adns__tcp_tryconnect(adns_state ads, struct timeval now) {
       adns__diag(ads,-1,0,"unable to find protocol no. for TCP !");
       return;
     }
-    fd= socket(AF_INET,SOCK_STREAM,proto->p_proto);
+    fd= socket(ads->servers[ads->tcpserver].sin_family,SOCK_STREAM,proto->p_proto);
     if (fd<0) {
       adns__diag(ads,-1,0,"cannot create TCP socket: %s",strerror(errno));
       return;
