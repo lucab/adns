@@ -321,8 +321,11 @@ int adns__pollfds(adns_state ads, struct pollfd pollfds_buf[MAX_POLLFDS]) {
   /* Returns the number of entries filled in.  Always zeroes revents. */
 
   assert(MAX_POLLFDS==2);
+  if (ads->udpsocket >= 0)
+    pollfds_buf[0].fd= ads->udpsocket;
+  else if(ads->udpsocket6 >= 0)
+    pollfds_buf[0].fd= ads->udpsocket6;
 
-  pollfds_buf[0].fd= ads->udpsocket;
   pollfds_buf[0].events= POLLIN;
   pollfds_buf[0].revents= 0;
 
@@ -348,6 +351,7 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
   int want, dgramlen, r, udpaddrlen, serv, old_skip;
   byte udpbuf[DNS_MAXUDP];
   struct sockaddr_in udpaddr;
+  struct sockaddr_in6 udpaddr6;
   
   adns__consistency(ads,0,cc_entex);
 
@@ -440,6 +444,48 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
       adns__procdgram(ads,udpbuf,r,serv,0,*now);
     }
   }
+  else if (fd == ads->udpsocket6) {
+    for (;;) {
+      udpaddrlen= sizeof(udpaddr6);
+      r= recvfrom(ads->udpsocket6,udpbuf,sizeof(udpbuf),0,
+                  (struct sockaddr*)&udpaddr6,&udpaddrlen);
+      if (r<0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) { r= 0; goto xit; }
+        if (errno == EINTR) continue;
+        if (errno_resources(errno)) { r= errno; goto xit; }
+        adns__warn(ads,-1,0,"datagram receive error: %s",strerror(errno));
+        r= 0; goto xit;
+      }
+      if (udpaddrlen != sizeof(udpaddr6)) {
+        adns__diag(ads,-1,0,"datagram received with wrong address length %d"
+                   " (expected %lu)", udpaddrlen,
+                   (unsigned long)sizeof(udpaddr6));
+        continue;
+      }
+      if (udpaddr6.sin6_family != AF_INET6) {
+        adns__diag(ads,-1,0,"datagram received with wrong protocol family"
+                   " %u (expected %u)",udpaddr6.sin6_family,AF_INET6);
+        continue;
+      }
+      if (ntohs(udpaddr6.sin6_port) != DNS_PORT) {
+        adns__diag(ads,-1,0,"datagram received from wrong port"
+                   " %u (expected %u)", ntohs(udpaddr6.sin6_port),DNS_PORT);
+        continue;
+      }
+      for (serv= 0;
+	   serv < ads->nservers &&
+             ads->servers[serv].addr6.s6_addr != udpaddr6.sin6_addr.s6_addr;
+           serv++);
+      if (serv >= ads->nservers) {
+	char buf_dst[INET6_ADDRSTRLEN];
+        adns__warn(ads,-1,0,"datagram received from unknown nameserver %s",
+                   inet_ntop(AF_INET6, &(udpaddr6.sin6_addr), buf_dst, INET6_ADDRSTRLEN*sizeof(char)));
+        continue;
+      }
+      adns__procdgram(ads,udpbuf,r,serv,0,*now);
+    }
+  }
+
   r= 0;
 xit:
   adns__consistency(ads,0,cc_entex);

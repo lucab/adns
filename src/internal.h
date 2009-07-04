@@ -313,7 +313,7 @@ struct adns__state {
   int configerrno;
   struct query_queue udpw, tcpw, childw, output;
   adns_query forallnext;
-  int nextid, udpsocket, tcpsocket;
+  int nextid, udpsocket, udpsocket6, tcpsocket;
   vbuf tcpsend, tcprecv;
   int nservers, nsortlist, nsearchlist, searchndots, tcpserver, tcprecv_skip;
   enum adns__tcpstate {

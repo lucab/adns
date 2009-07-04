@@ -281,7 +281,7 @@ void adns__query_send(adns_query qu, struct timeval now) {
     servaddr6.sin6_family= ads->servers[serv].sin_family;
     servaddr6.sin6_addr= ads->servers[serv].addr6;
     servaddr6.sin6_port= htons(DNS_PORT);
-    r= sendto(ads->udpsocket,qu->query_dgram,qu->query_dglen,0,
+    r= sendto(ads->udpsocket6,qu->query_dgram,qu->query_dglen,0,
 		(const struct sockaddr*)&servaddr6,sizeof(servaddr6));
   }
 

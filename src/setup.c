@@ -69,7 +69,7 @@ static void addserverv6(adns_state ads, struct in6_addr addr) {
   char buf[INET6_ADDRSTRLEN];
 
   for (i=0; i<ads->nservers; i++) {
-    if ((ads->servers[i].sin_family == AF_INET6) && (ads->servers[i].addr6.s6_addr == addr.s6_addr)) {
+    if ((ads->servers[i].sin_family == AF_INET6) && !(memcmp(&(ads->servers[i].addr6.s6_addr), &(addr.s6_addr), sizeof(struct in6_addr)))) {
       adns__debug(ads,-1,0,"duplicate nameserver %s ignored", inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN*sizeof(char)));
       return;
     }
@@ -559,7 +559,7 @@ static int init_begin(adns_state *ads_r, adns_initflags flags,
   LIST_INIT(ads->output);
   ads->forallnext= 0;
   ads->nextid= 0x311f;
-  ads->udpsocket= ads->tcpsocket= -1;
+  ads->udpsocket= ads->udpsocket6= ads->tcpsocket= -1;
   adns__vbuf_init(&ads->tcpsend);
   adns__vbuf_init(&ads->tcprecv);
   ads->tcprecv_skip= 0;
@@ -594,14 +594,26 @@ static int init_finish(adns_state ads) {
   ads->udpsocket= socket(AF_INET,SOCK_DGRAM,proto->p_proto);
   if (ads->udpsocket<0) { r= errno; goto x_free; }
 
+  ads->udpsocket6= socket(AF_INET6,SOCK_DGRAM,proto->p_proto);
+  if (ads->udpsocket6<0) { r= errno; goto x_free6; }
+
   r= adns__setnonblock(ads,ads->udpsocket);
   if (r) { r= errno; goto x_closeudp; }
+  
+  r= adns__setnonblock(ads,ads->udpsocket6);
+  if (r) { r= errno; goto x_closeudp6; }
   
   return 0;
 
  x_closeudp:
   close(ads->udpsocket);
  x_free:
+  free(ads);
+  return r;
+ 
+ x_closeudp6:
+  close(ads->udpsocket6);
+ x_free6:
   free(ads);
   return r;
 }
@@ -715,7 +727,10 @@ void adns_finish(adns_state ads) {
     else if (ads->output.head) adns_cancel(ads->output.head);
     else break;
   }
-  close(ads->udpsocket);
+  if (ads->udpsocket >= 0)
+    close(ads->udpsocket);
+  if (ads->udpsocket6 >= 0)
+    close(ads->udpsocket6);
   if (ads->tcpsocket >= 0) close(ads->tcpsocket);
   adns__vbuf_free(&ads->tcpsend);
   adns__vbuf_free(&ads->tcprecv);
