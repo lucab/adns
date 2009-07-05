@@ -129,6 +129,16 @@ typedef struct typeinfo {
    * and will not be null-terminated by convstring.
    */
 
+  void (*submithook)(adns_query qu,
+		     /* FIXME: Do we need to pass flags? Isn't qu->flags enough? */
+		     adns_queryflags flags,
+		     struct timeval now);
+  /* If NULL, submitting a query means to format it and send it over
+   * the wire. If non-NULL, the labels are written to qu->vb, and then
+   * this function is called. It's the hook's responsibility to submit
+   * the query, or submit some other queries and put the original on
+   * the child queue. */
+
   adns_status (*parse)(const parseinfo *pai, int cbyte,
 		       int max, void *store_r);
   /* Parse one RR, in dgram of length dglen, starting at cbyte and
@@ -176,6 +186,8 @@ adns_status adns__qdpl_normal(adns_state ads,
 
 typedef struct allocnode {
   struct allocnode *next, *back;
+  size_t size;
+  /* Needed for realloc */
 } allocnode;
 
 union maxalign {
@@ -191,10 +203,15 @@ typedef struct {
   void *ext;
   void (*callback)(adns_query parent, adns_query child);
   union {
-    adns_rr_addr ptr_parent_addr;
     adns_rr_hostaddr *hostaddr;
   } info;
 } qcontext;
+
+typedef struct {
+  union {
+    adns_rr_addr ptr_addr;
+  } info;
+} qextra;
 
 struct adns__query {
   adns_state ads;
@@ -242,13 +259,19 @@ struct adns__query {
    * the vbuf is initialised but empty and everything else is zero.
    */
 
-  int id, flags, retries;
+  int id;
+  /* -2 at allocation, -1 when done, >= 0 while the query is pending. */
+  
+  int flags, retries;
   int udpnextserver;
   unsigned long udpsent; /* bitmap indexed by server */
   struct timeval timeout;
   time_t expires; /* Earliest expiry time of any record we used. */
 
   qcontext ctx;
+  /* Information related to the parent of the query */
+  qextra extra;
+  /* Extra information about this query. */
 
   /* Possible states:
    *
@@ -270,34 +293,34 @@ struct adns__query {
    *
    *			      +------------------------+
    *             START -----> |      tosend/NONE       |
-   *			      +------------------------+
-   *                         /                       |\  \
-   *        too big for UDP /             UDP timeout  \  \ send via UDP
-   *        send via TCP   /              more retries  \  \
-   *        when conn'd   /                  desired     \  \
-   *                     |     	       	       	       	  |  |
-   *                     v				  |  v
-   *              +-----------+         	    	+-------------+
-   *              | tcpw/tcpw | ________                | tosend/udpw |
-   *              +-----------+         \	    	+-------------+
-   *                 |    |              |     UDP timeout | |
-   *                 |    |              |      no more    | |
-   *                 |    |              |      retries    | |
-   *                  \   | TCP died     |      desired    | |
-   *                   \   \ no more     |                 | |
-   *                    \   \ servers    | TCP            /  |
-   *                     \   \ to try    | timeout       /   |
-   *                  got \   \          v             |_    | got
-   *                 reply \   _| +------------------+      / reply
-   *   	       	       	    \  	  | done/output FAIL |     /
-   *                         \    +------------------+    /
-   *                          \                          /
-   *                           _|                      |_
-   *                             (..... got reply ....)
-   *                              /                   \
+   *                     _____+------------------------+
+   *  consists of  __-----           /                |\  \
+   *  child-     /                 /      UDP timeout  \  \ send via UDP
+   *  queries   /  too big for UDP/       more retries  \  \
+   *  only     /   send via TCP  /           desired     \  \
+   *          /    when conn'd  /                         |  |
+   *         /                |_                          |  v
+   *        |     +-----------+                         +-------------+
+   *        |     | tcpw/tcpw | ________                | tosend/udpw |
+   *        |     +-----------+         \               +-------------+
+   *        |        |    |              |     UDP timeout | |
+   *        |        |    |              |      no more    | |
+   *        |        |    |              |      retries    | |
+   *        |         \   | TCP died     |      desired    | |
+   *        |          \   \ no more     |                 | |
+   *        |           \   \ servers    | TCP            /  |
+   *        |            \   \ to try    | timeout       /   |
+   *        |         got \   \          v             |_    | got
+   *        |        reply \   _| +------------------+      / reply
+   *         \              \     | done/output FAIL |     /
+   *          \              \    +------------------+    /
+   *           \              \                          /
+   *            \              _|                      |_
+   *             \               (..... got reply ....)
+   *              \               /                   \
    *        need child query/ies /                     \ no child query
-   *                            /                       \
-   *                          |_                         _|
+   *                \           /                       \
+   *                 _|       |_                         _|
    *		   +---------------+		       +----------------+
    *               | childw/childw | ----------------> | done/output OK |
    *               +---------------+  children done    +----------------+
@@ -333,7 +356,12 @@ struct adns__state {
     struct in_addr addr;
   } servers[MAXSERVERS];
   struct sortlist {
-    struct in_addr base, mask;
+    sa_family_t family;
+    unsigned prefix;
+    union {
+      struct in_addr inet;
+      struct in6_addr inet6;
+    } base;
   } sortlist[MAXSORTLIST];
   char **searchlist;
   unsigned short rand48xsubi[3];
@@ -401,12 +429,26 @@ void adns__sigpipe_unprotect(adns_state);
 
 /* From transmit.c: */
 
+adns_status adns__mkquery_labels(adns_state ads, vbuf *vb,
+				 const char *owner, int ol,
+				 const typeinfo *typei, adns_queryflags flags);
+/* Assembles the owner part of a query packet in vb. */
+
+adns_status adns__mkquery_labels_frdgram(adns_state ads, vbuf *vb,
+					 const byte *qd_dgram, int qd_dglen,
+					 int qd_begin);
+
 adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
 			  const char *owner, int ol,
 			  const typeinfo *typei, adns_rrtype type,
 			  adns_queryflags flags);
 /* Assembles a query packet in vb.  A new id is allocated and returned.
  */
+
+adns_status adns__mkquery_frlabels(adns_state ads, vbuf *vb, int *id_r,
+				   char *l, int llen,
+				   adns_rrtype type, adns_queryflags flags);
+/* Same as adns__mkquery, but with the labels preformatted. */
 
 adns_status adns__mkquery_frdgram(adns_state ads, vbuf *vb, int *id_r,
 				  const byte *qd_dgram, int qd_dglen,
@@ -447,6 +489,9 @@ adns_status adns__internal_submit(adns_state ads, adns_query *query_r,
  * the memory for it is _taken over_ by this routine whether it
  * succeeds or fails (if it succeeds, the vbuf is reused for qu->vb).
  *
+ * For query types with a submithook (i.e. adns_r_addr),
+ * vbuf should contain just the label, not a complete query.
+ *
  * *ctx is copied byte-for-byte into the query.
  *
  * When the child query is done, ctx->callback will be called.  The
@@ -474,6 +519,7 @@ void adns__search_next(adns_state ads, adns_query qu, struct timeval now);
  */
 
 void *adns__alloc_interim(adns_query qu, size_t sz);
+void *adns__realloc_interim(adns_query qu, void *p, size_t sz);
 void *adns__alloc_preserved(adns_query qu, size_t sz);
 /* Allocates some memory, and records which query it came from
  * and how much there was.

@@ -71,6 +71,10 @@
 extern "C" { /* I really dislike this - iwj. */
 #endif
 
+#ifndef AF_INET6
+#include "adns-in6fake.h"
+#endif
+
 /* All struct in_addr anywhere in adns are in NETWORK byte order. */
 
 typedef struct adns__state *adns_state;
@@ -87,7 +91,10 @@ typedef enum { /* In general, or together the desired flags: */
  adns_if_eintr=       0x0020,/* allow _wait and _synchronous to return EINTR */
  adns_if_nosigpipe=   0x0040,/* applic has SIGPIPE ignored, do not protect */
  adns_if_checkc_entex=0x0100,/* consistency checks on entry/exit to adns fns */
- adns_if_checkc_freq= 0x0300 /* consistency checks very frequently (slow!) */
+ adns_if_checkc_freq= 0x0300,/* consistency checks very frequently (slow!) */
+ adns_if_ip4only=     0x1000,/* make default be adns_qf_ip4 */
+ adns_if_ip6only=     0x2000,/* make default be adns_qf_ip6 */
+ adns_if_ip6mapped=   0x4000,/* make default be adns_qf_ip4|adns_qf_ip6|adns_qf_ip6mapped */
 } adns_initflags;
 
 typedef enum { /* In general, or together the desired flags: */
@@ -101,9 +108,54 @@ typedef enum { /* In general, or together the desired flags: */
  adns_qf_quotefail_cname=0x00000080,/* refuse if quote-req chars in CNAME we go via */
  adns_qf_cname_loose=    0x00000100,/* allow refs to CNAMEs - without, get _s_cname */
  adns_qf_cname_forbid=   0x00000200,/* don't follow CNAMEs, instead give _s_cname */
+
+ /* Affects addr queries and additional section processing */
+ adns_qf_ip4=            0x00001000, /* Ask for A records */
+ adns_qf_ip6=            0x00002000, /* Ask for AAAA records */
+ adns_qf_ip6mapped=      0x00004000, /* Return any IPv4 addresses as IPv6 mapped addresses */
+
+ adns__qf_ip_mask=       0x00003000,
  adns__qf_internalmask=  0x0ff00000
 } adns_queryflags;
 
+/* IPv6 support:
+ *
+ * The _qf_ip4 and _qf_ip6 says which kinds of address records (A and
+ * AAAA) we should ask for. _qf_ip6mapped says how we return ipv6
+ * addresses to the caller. Four modes of operation, corresponding to
+ * the _if_ip* flags:
+ *
+ *     Record type:         A              AAAA
+ *  flags:
+ *
+ *    Default               => AF_INET     => AF_INET6
+ *				        
+ *    _if_ip4only           => AF_INET     not used
+ *				        
+ *    _if_ip6only           not used       => AF_INET6
+ *				        
+ *    _if_ipv6mapped        => AF_INET6    => AF_INET6
+ *				        
+ *    _if_ip4only           => AF_INET6    not used
+ *      | _if_ipv6mapped
+ *
+ * Furthermore, there are configuration options which can prevent the
+ * use of either AAAA or A records for _r_addr; so it is safe to use
+ * _qf_ip6_mapped and _r_addr without checking explicitly whether the host
+ * has IPv6 connectivity.
+ *
+ * The corresponding _qf_ip* flags are constructed from the _if_ip*
+ * flags and the query flags submitted to functions like adns_submit.
+ * If none of _qf_ip4 and _qf_ip6 are set explicitly in the query
+ * flags, the default behaviour is used. If the flags are set, the
+ * default configuration is overridden.
+ *
+ * Applications which do not support IPv4 should set none of these
+ * flags.  Applications which have been `naively' converted to use
+ * AF_INET6 throughout should set adns_if_ip6.  Applications which
+ * know what they are doing should know which flags to set :-).
+ */
+  
 typedef enum {
  adns_rrt_typemask=  0x0ffff,
  adns__qtf_deref=    0x10000,/* dereference domains; perhaps get extra data */
@@ -126,6 +178,8 @@ typedef enum {
     * do that.
     *
     * Don't forget adns_qf_quoteok if that's what you want. */
+
+ adns__qtf_special= 0x80000,/* no simple correspondence to a single rr type */
 
  adns_r_none=             0,
  		     
@@ -151,6 +205,7 @@ typedef enum {
  		     
  adns_r_rp_raw=          17,
  adns_r_rp=                  adns_r_rp_raw|adns__qtf_mail822,
+ adns_r_aaaa=            28,   /* RFC 1886 */
 
  /* For SRV records, query domain without _qf_quoteok_query must look
   * as expected from SRV RFC with hostname-like Name.  _With_
@@ -158,7 +213,8 @@ typedef enum {
  adns_r_srv_raw=         33,
  adns_r_srv=                 adns_r_srv_raw|adns__qtf_deref,
 		     
- adns_r_addr=                adns_r_a|adns__qtf_deref
+ /* FIXME: Maybe add adns__qtf_deref too? */
+ adns_r_addr=                1 | adns__qtf_special,
  
 } adns_rrtype;
 
@@ -284,9 +340,13 @@ typedef enum {
 
 typedef struct {
   int len;
+#if 0
+  int order; /* Cache index on sortlist? */
+#endif
   union {
     struct sockaddr sa;
     struct sockaddr_in inet;
+    struct sockaddr_in6 inet6;
   } addr;
 } adns_rr_addr;
 
@@ -355,6 +415,7 @@ typedef struct {
     adns_rr_intstr *(*manyistr);     /* txt (list strs ends with i=-1, str=0)*/
     adns_rr_addr *addr;              /* addr */
     struct in_addr *inaddr;          /* a */
+    struct in6_addr *in6addr;        /* aaaa */
     adns_rr_hostaddr *hostaddr;      /* ns */
     adns_rr_intstrpair *intstrpair;  /* hinfo */
     adns_rr_strpair *strpair;        /* rp, rp_raw */
@@ -506,6 +567,13 @@ int adns_init_logfn(adns_state *newstate_r, adns_initflags flags,
  *   setting of adns_if_check_entex, adns_if_check_freq, or neither,
  *   in the flags passed to adns_init.
  * 
+ *  in6only
+ *  in4only
+ *   Return only IPv6, respectively only IPv4 addresses, in
+ *   _rr_addr's.  This may result in an adns_s_nodata error, if the
+ *   application only supports, or the remote host only has, the wrong
+ *   kind of address.
+ * 
  * There are a number of environment variables which can modify the
  * behaviour of adns.  They take effect only if adns_init is used, and
  * the caller of adns_init can disable them using adns_if_noenv.  In
@@ -589,7 +657,33 @@ int adns_submit_reverse(adns_state ads,
 			void *context,
 			adns_query *query_r);
 /* type must be _r_ptr or _r_ptr_raw.  _qf_search is ignored.
- * addr->sa_family must be AF_INET or you get ENOSYS.
+ * addr->sa_family must be AF_INET or AF_INET6 or you get ENOSYS.
+ */
+
+int adns_getaddrinfo(adns_state ads,
+		     const char *name,           /* Eg, "www.example.coom" */
+		     const char *service,        /* Eg, "http" */
+		     const char *protocol,       /* Eg, "tcp" */
+		     unsigned short defaultport, /* Eg, 80 */
+		     adns_queryflags flags,
+		     adns_answer **answer_r, int *invented_r);
+/* Does an SRV lookup (RFC2052).  If this fails, tries an AAAA or A
+ * lookup instead, and if found uses getservbyname to find the port
+ * number (or failing that, uses defaultport. The defaultport is in
+ * hot byte order).  In the `fallback' case, will invent an SRV record
+ * which have priority and weight == 0 and set *invented_r to 1; if
+ * real SRV records were found, will set *invented_r to 0.  invented_r
+ * may be null but answer_r may not be.  If _getaddrinfo returns
+ * nonzero, *answer_r and/or *invented_r may or may not have been
+ * overwritten and should not be used.
+ *
+ * NB, like adns_synchronous, can fail either by returning an errno
+ * value, or by returning an adns_answer with ->nrrs==0 and
+ * ->status!=0.
+ *
+ * You have to write two loops when using the returned value, an outer
+ * one to loop over the returned SRV's, and an inner one to loop over
+ * the addresses for each one.
  */
 
 int adns_submit_reverse_any(adns_state ads,
@@ -602,7 +696,7 @@ int adns_submit_reverse_any(adns_state ads,
 /* For RBL-style reverse `zone's; look up
  *   <reversed-address>.<zone>
  * Any type is allowed.  _qf_search is ignored.
- * addr->sa_family must be AF_INET or you get ENOSYS.
+ * addr->sa_family must be AF_INET or AF_INET6 or you get ENOSYS.
  */
 
 void adns_finish(adns_state ads);

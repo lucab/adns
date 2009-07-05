@@ -150,6 +150,7 @@ static void ccf_search(adns_state ads, const char *fn,
 
 static void ccf_sortlist(adns_state ads, const char *fn,
 			 int lno, const char *buf) {
+  /* FIXME: Handle IPv6 addresses */
   const char *word;
   char tbuf[200], *slash, *ep;
   struct in_addr base, mask;
@@ -191,6 +192,21 @@ static void ccf_sortlist(adns_state ads, const char *fn,
 			 " overlaps address `%s'",slash,tbuf);
 	  continue;
 	}
+	{
+	  /* Convert bitmask to prefix length */
+	  unsigned long bits;
+
+	  for(bits=ntohl(mask.s_addr), initial = 0;
+	      bits & 0x80000000UL;
+	      bits <<= 1)
+	    initial++;
+
+	  if (bits & 0xffffffff) {
+	    configparseerr(ads,fn,lno,
+			   "mask `%s' in sortlist is non-continuous",slash);
+	    continue;
+	  }
+	}
       } else {
 	initial= strtoul(slash,&ep,10);
 	if (*ep || initial>32) {
@@ -202,11 +218,11 @@ static void ccf_sortlist(adns_state ads, const char *fn,
     } else {
       baselocal= ntohl(base.s_addr);
       if (!baselocal & 0x080000000UL) /* class A */
-	mask.s_addr= htonl(0x0ff000000UL);
+	initial = 8;
       else if ((baselocal & 0x0c0000000UL) == 0x080000000UL)
-	mask.s_addr= htonl(0x0ffff0000UL); /* class B */
+	initial= 16;                  /* class B */
       else if ((baselocal & 0x0f0000000UL) == 0x0e0000000UL)
-	mask.s_addr= htonl(0x0ff000000UL); /* class C */
+	initial= 24;                  /* class C */
       else {
 	configparseerr(ads,fn,lno, "network address `%s'"
 		       " in sortlist is not in classed ranges,"
@@ -215,8 +231,10 @@ static void ccf_sortlist(adns_state ads, const char *fn,
       }
     }
 
-    ads->sortlist[ads->nsortlist].base= base;
-    ads->sortlist[ads->nsortlist].mask= mask;
+    ads->sortlist[ads->nsortlist].family= AF_INET;
+    ads->sortlist[ads->nsortlist].base.inet= base;
+    ads->sortlist[ads->nsortlist].prefix= initial;
+
     ads->nsortlist++;
   }
 }

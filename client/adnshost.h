@@ -81,6 +81,8 @@ extern int ov_verbose;
 extern adns_rrtype ov_type;
 extern int ov_search, ov_qc_query, ov_qc_anshost, ov_qc_cname;
 extern int ov_tcp, ov_cname, ov_format;
+extern int ov_ipflags;
+extern int ov_ip6mapped;
 extern char *ov_id;
 extern struct perqueryflags_remember ov_pqfr;
 

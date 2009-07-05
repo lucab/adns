@@ -62,6 +62,8 @@ static adns_status mkquery_header(adns_state ads, vbuf *vb,
   return adns_s_ok;
 }
 
+/* FIXME: Return value is always adns_s_ok, and never used. But I
+ * don't understand why we can assert that we have space in the vbuf. */
 static adns_status mkquery_footer(vbuf *vb, adns_rrtype type) {
   byte *rqp;
 
@@ -118,17 +120,15 @@ adns_status adns__qdpl_normal(adns_state ads,
   return adns_s_ok;
 }
 
-adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
+adns_status adns__mkquery_labels(adns_state ads, vbuf *vb,
 			  const char *owner, int ol,
-			  const typeinfo *typei, adns_rrtype type,
-			  adns_queryflags flags) {
+				 const typeinfo *typei, adns_queryflags flags) {
   int labelnum, ll, nbytes;
-  byte label[255];
-  byte *rqp;
+  byte label[255], *rqp;
   const char *p, *pe;
   adns_status st;
 
-  st= mkquery_header(ads,vb,id_r,ol+2); if (st) return st;
+  if (!adns__vbuf_ensure(vb,ol+2)) return adns_s_nomemory;
   
   MKQUERY_START(vb);
 
@@ -149,22 +149,31 @@ adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
   MKQUERY_ADDB(0);
 
   MKQUERY_STOP(vb);
+  return adns_s_ok;  
+}
+
+adns_status adns__mkquery(adns_state ads, vbuf *vb, int *id_r,
+			  const char *owner, int ol,
+			  const typeinfo *typei, adns_rrtype type,
+			  adns_queryflags flags) {
+  adns_status st;
   
+  st= mkquery_header(ads,vb,id_r,ol+2); if (st) return st;
+  st= adns__mkquery_labels(ads, vb, owner, ol, typei, flags); if (st) return st;
   st= mkquery_footer(vb,type);
   
   return adns_s_ok;
 }
 
-adns_status adns__mkquery_frdgram(adns_state ads, vbuf *vb, int *id_r,
+adns_status adns__mkquery_labels_frdgram(adns_state ads, vbuf *vb,
 				  const byte *qd_dgram, int qd_dglen,
-				  int qd_begin,
-				  adns_rrtype type, adns_queryflags flags) {
+                                         int qd_begin) {
+  adns_status st;
   byte *rqp;
   findlabel_state fls;
   int lablen, labstart;
-  adns_status st;
 
-  st= mkquery_header(ads,vb,id_r,qd_dglen); if (st) return st;
+  if (!adns__vbuf_ensure(vb,qd_dglen)) return adns_s_nomemory;
 
   MKQUERY_START(vb);
 
@@ -181,6 +190,30 @@ adns_status adns__mkquery_frdgram(adns_state ads, vbuf *vb, int *id_r,
 
   MKQUERY_STOP(vb);
   
+  return adns_s_ok;  
+}
+
+adns_status adns__mkquery_frdgram(adns_state ads, vbuf *vb, int *id_r,
+				  const byte *qd_dgram, int qd_dglen,
+				  int qd_begin,
+				  adns_rrtype type, adns_queryflags flags) {
+  adns_status st;
+
+  st= mkquery_header(ads,vb,id_r,qd_dglen); if (st) return st;
+  st= adns__mkquery_labels_frdgram(ads, vb, qd_dgram, qd_dglen, qd_begin);
+  if (st) return st;
+  st= mkquery_footer(vb,type);
+  
+  return adns_s_ok;
+}
+
+adns_status adns__mkquery_frlabels(adns_state ads, vbuf *vb, int *id_r,
+                                   char *l, int llen,
+                                   adns_rrtype type, adns_queryflags flags) {
+  adns_status st;
+  
+  st= mkquery_header(ads,vb,id_r,llen); if (st) return st;
+  if (!adns__vbuf_append(vb, l, llen)) return adns_s_nomemory;
   st= mkquery_footer(vb,type);
   
   return adns_s_ok;

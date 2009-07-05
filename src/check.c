@@ -24,6 +24,8 @@
  *  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
  */
 
+#include <stdlib.h>
+
 #include "internal.h"
 
 void adns_checkconsistency(adns_state ads, adns_query qu) {
@@ -78,10 +80,10 @@ static void checkc_global(adns_state ads) {
   int i;
   
   assert(ads->udpsocket >= 0);
-
+#if 0
   for (i=0; i<ads->nsortlist; i++)
     assert(!(ads->sortlist[i].base.s_addr & ~ads->sortlist[i].mask.s_addr));
-
+#endif
   assert(ads->tcpserver >= 0 && ads->tcpserver < ads->nservers);
   
   switch (ads->tcpstate) {

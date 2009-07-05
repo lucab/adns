@@ -119,13 +119,16 @@ static const adns_rrtype defaulttypes[]= {
   adns_r_ptr_raw,
   adns_r_hinfo,
   adns_r_mx_raw,
+  adns_r_srv_raw,
   adns_r_txt,
   adns_r_rp_raw,
+  adns_r_aaaa, /* Does the order matter? */
   
   adns_r_addr,
   adns_r_ns,
   adns_r_ptr,
   adns_r_mx,
+  adns_r_srv,
   
   adns_r_soa,
   adns_r_rp,

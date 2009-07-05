@@ -92,24 +92,37 @@ static void prep_query(struct query_node **qun_r, int *quflags_r) {
     (ov_qc_query ? adns_qf_quoteok_query : 0) |
     (ov_qc_anshost ? adns_qf_quoteok_anshost : 0) |
     (ov_qc_cname ? 0 : adns_qf_quoteok_cname) |
+    ov_ipflags | ov_ip6mapped |
     ov_cname,
     
   *qun_r= qun;
 }
   
+static int a2addr(adns_rr_addr *rr, const char *addr) {
+  char *p;
+  if (strchr(addr, ':')) {
+    memset(&rr->addr.inet6, 0, sizeof(rr->addr.inet6));
+    rr->addr.sa.sa_family = AF_INET6;
+    p = (char *) &rr->addr.inet6.sin6_addr;
+  }
+  else {
+    memset(&rr->addr.inet, 0, sizeof(rr->addr.inet));
+    rr->addr.sa.sa_family = AF_INET;
+    p = (char *) &rr->addr.inet.sin_addr;
+  }
+  return inet_pton(rr->addr.sa.sa_family, addr, p) > 0;
+}
+
 void of_ptr(const struct optioninfo *oi, const char *arg, const char *arg2) {
   struct query_node *qun;
   int quflags, r;
-  struct sockaddr_in sa;
+  adns_rr_addr rr;
 
-  memset(&sa,0,sizeof(sa));
-  sa.sin_family= AF_INET;
-  if (!inet_aton(arg,&sa.sin_addr)) usageerr("invalid IP address %s",arg);
-
+  if (!a2addr(&rr, arg)) usageerr("invalid IP address %s",arg);
   prep_query(&qun,&quflags);
   qun->owner= xstrsave(arg);
   r= adns_submit_reverse(ads,
-			 (struct sockaddr*)&sa,
+			 &rr.addr.sa,
 			 ov_type == adns_r_none ? adns_r_ptr : ov_type,
 			 quflags,
 			 qun,
@@ -122,17 +135,14 @@ void of_ptr(const struct optioninfo *oi, const char *arg, const char *arg2) {
 void of_reverse(const struct optioninfo *oi, const char *arg, const char *arg2) {
   struct query_node *qun;
   int quflags, r;
-  struct sockaddr_in sa;
+  adns_rr_addr rr;
 
-  memset(&sa,0,sizeof(sa));
-  sa.sin_family= AF_INET;
-  if (!inet_aton(arg,&sa.sin_addr)) usageerr("invalid IP address %s",arg);
-
+  if (!a2addr(&rr, arg)) usageerr("invalid IP address %s",arg);
   prep_query(&qun,&quflags);
   qun->owner= xmalloc(strlen(arg) + strlen(arg2) + 2);
   sprintf(qun->owner, "%s %s", arg,arg2);
   r= adns_submit_reverse_any(ads,
-			     (struct sockaddr*)&sa, arg2,
+			     &rr.addr.sa, arg2,
 			     ov_type == adns_r_none ? adns_r_txt : ov_type,
 			     quflags,
 			     qun,

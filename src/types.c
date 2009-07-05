@@ -48,12 +48,15 @@
  * _manyistr                  (mf,cs)
  * _txt                       (pa)
  * _inaddr                    (pa,dip,di)
- * _addr                      (pa,di,csp,cs)
+ * _in6addr                   (pa,cs)
+ * _addr                      (sh,di,csp,cs)
  * _domain                    (pap)
  * _host_raw                  (pa)
  * _hostaddr                  (pap,pa,dip,di,mfp,mf,csp,cs +pap_findaddrs)
  * _mx_raw                    (pa,di)
  * _mx                        (pa,di)
+ * _srv_raw                   (pa,di,mf,cs)
+ * _srv                       (pa,di,mf,cs)
  * _inthostaddr               (mf,cs)
  * _ptr                       (pa)
  * _strpair                   (mf,cs)
@@ -251,14 +254,20 @@ static adns_status pa_inaddr(const parseinfo *pai, int cbyte,
   return adns_s_ok;
 }
 
-static int search_sortlist(adns_state ads, struct in_addr ad) {
+static int search_sortlist_in(adns_state ads, struct in_addr ad) {
   const struct sortlist *slp;
   int i;
   
   for (i=0, slp=ads->sortlist;
-       i<ads->nsortlist &&
-	 !((ad.s_addr & slp->mask.s_addr) == slp->base.s_addr);
-       i++, slp++);
+       i<ads->nsortlist;
+       i++, slp++) {
+    if (slp->family == AF_INET) {
+      struct in_addr mask;
+      mask.s_addr = htonl(-1 << slp->prefix);
+      if ( (ad.s_addr & mask.s_addr ) == slp->base.inet.s_addr)
+	break;
+    }
+  }
   return i;
 }
 
@@ -267,8 +276,8 @@ static int dip_inaddr(adns_state ads, struct in_addr a, struct in_addr b) {
   
   if (!ads->nsortlist) return 0;
 
-  ai= search_sortlist(ads,a);
-  bi= search_sortlist(ads,b);
+  ai= search_sortlist_in(ads,a);
+  bi= search_sortlist_in(ads,b);
   return bi<ai;
 }
 
@@ -289,27 +298,297 @@ static adns_status cs_inaddr(vbuf *vb, const void *datap) {
 }
 
 /*
- * _addr   (pa,di,csp,cs)
+ * _in6addr   (pa,dip,di)
  */
 
-static adns_status pa_addr(const parseinfo *pai, int cbyte,
+static adns_status pa_in6addr(const parseinfo *pai, int cbyte,
 			   int max, void *datap) {
-  adns_rr_addr *storeto= datap;
+  struct in_addr *storeto= datap;
+  
+  if (max-cbyte != 16) return adns_s_invaliddata;
+  memcpy(storeto, pai->dgram + cbyte, 16);
+  return adns_s_ok;
+}
+
+static int search_sortlist_in6(adns_state ads, const struct in6_addr *ad) {
+  const struct sortlist *slp;
+  int i;
+  
+  for (i=0, slp=ads->sortlist;
+       i<ads->nsortlist;
+       i++, slp++) {
+    if (slp->family == AF_INET6) {
+      int pb = slp->prefix / 8;
+      int mask = 0xff & (-1 << (slp->prefix % 8)); 
+      if (memcmp(ad->s6_addr, slp->base.inet6.s6_addr, pb) == 0
+	  && (!mask
+	      || (ad->s6_addr[pb] & mask) == slp->base.inet6.s6_addr[pb]))
+	break;
+    }
+  }
+  return i;
+}
+
+static int dip_in6addr(adns_state ads,
+		       const struct in6_addr *a, const struct in6_addr *b) {
+  int ai, bi;
+  
+  if (!ads->nsortlist) return 0;
+
+  ai= search_sortlist_in6(ads,a);
+  bi= search_sortlist_in6(ads,b);
+  return bi<ai;
+}
+
+static int di_in6addr(adns_state ads,
+		     const void *datap_a, const void *datap_b) {
+  const struct in6_addr *ap= datap_a, *bp= datap_b;
+
+  return dip_in6addr(ads,ap,bp);
+}
+
+
+static adns_status cs_in6addr(vbuf *vb, const void *datap) {
+  char buf[INET6_ADDRSTRLEN];
+  const char *ia;
+
+  ia= inet_ntop(AF_INET6, datap, buf, sizeof(buf)); assert(ia);
+  CSP_ADDSTR(ia);
+  return adns_s_ok;
+}
+
+/*
+ * _addr   (sh,pa,di,csp,cs)
+ */
+
+static void mk_mapped_ipv6(struct sockaddr_in6 *sa, const struct in_addr *in) {
+  memset(sa, 0, sizeof(*sa));
+  sa->sin6_family = AF_INET6;
+  sa->sin6_addr.s6_addr16[5] = 0xffff;
+  sa->sin6_addr.s6_addr32[3] = in->s_addr;
+}
+
+static void icb_addr(adns_query parent, adns_query child) {
+  adns_answer *cans= child->answer;
+  adns_answer *pans= parent->answer;
+  adns_state ads= parent->ads;
+  adns_rr_addr *addr;
+  
+  int i;
+
+  if (parent->expires > child->expires) parent->expires = child->expires;
+  
+  if (cans->status == adns_s_nxdomain) {
+    adns__query_fail(parent,cans->status);
+    return;
+  }  
+  if (cans->status == adns_s_nodata && parent->children.head) {
+    /* We may get records from the remaining queries */
+    LIST_LINK_TAIL(ads->childw,parent);
+    return;
+  }
+  if (cans->status) {
+    if (pans->nrrs)
+      adns__query_done(parent);
+    else
+      adns__query_fail(parent,cans->status);
+    return;
+  }
+
+  assert(cans->nrrs);
+
+  /* Copy CNAME. CNAME must be consistent for both queries. */
+  if (cans->cname && pans->cname) {
+    if (strcmp(cans->cname, pans->cname)) {
+      adns__query_fail(parent, adns_s_inconsistent);
+      return;
+    }
+  }
+  else if (pans->cname) {
+    adns__query_fail(parent, adns_s_inconsistent);
+    return;
+  }
+  else if (cans->cname) {
+    size_t len;
+    if (pans->nrrs) {
+      adns__query_fail(parent, adns_s_inconsistent);
+      return;
+    }
+    len = strlen(cans->cname) + 1;
+    pans->cname = adns__alloc_preserved(parent, len);
+    if (!pans->cname) {
+      adns__query_fail(parent, adns_s_nomemory);
+      return;
+    }
+    memcpy(pans->cname, cans->cname, len);
+  }
+  if (pans->nrrs)
+    {
+      void *p = adns__realloc_interim(parent,pans->rrs.untyped,
+				      sizeof(adns_rr_addr) * (cans->nrrs + pans->nrrs));
+      if (!p) {
+	adns__query_fail(parent, adns_s_nomemory);
+	return;
+      }
+      pans->rrs.untyped = p;
+      addr = pans->rrs.addr + pans->nrrs;
+      pans->nrrs += cans->nrrs;
+    }
+  else {
+    pans->rrs.untyped
+      = adns__alloc_interim(parent,sizeof(adns_rr_addr) * cans->nrrs);
+    if (!pans->rrs.untyped) {
+      adns__query_fail(parent,adns_s_nomemory);
+      return;
+    }
+    pans->nrrs = cans->nrrs;
+    addr = pans->rrs.addr;
+  }
+
+  switch (cans->type) {
+  default: abort();
+  case adns_r_a:
+    if (parent->flags & adns_qf_ip6mapped)
+      for (i = 0; i<cans->nrrs; i++) {
+	addr[i].len = sizeof(struct sockaddr_in6);
+	mk_mapped_ipv6(&addr[i].addr.inet6, &cans->rrs.inaddr[i]);
+      }
+    else
+      for (i = 0; i<cans->nrrs; i++) {
+	addr[i].len = sizeof(struct sockaddr_in);
+	memset(&addr[i].addr.inet, 0, sizeof(addr[i].addr.inet));
+	addr[i].addr.inet.sin_family = AF_INET;
+	addr[i].addr.inet.sin_addr = cans->rrs.inaddr[i];
+      }
+    break;
+  case adns_r_aaaa:
+    for (i = 0; i<cans->nrrs; i++) {
+      addr[i].len = sizeof(struct sockaddr_in6);
+      memset(&addr[i].addr.inet6, 0, sizeof(addr[i].addr.inet6));
+      addr[i].addr.inet6.sin6_family = AF_INET6;
+      addr[i].addr.inet6.sin6_addr = cans->rrs.in6addr[i];
+    }
+    break;
+  }
+  
+  if (!parent->children.head) {
+    adns__query_done(parent);
+    return;
+  } else {
+    LIST_LINK_TAIL(ads->childw,parent);
+    return;
+  }
+}
+
+static void sh_addr(adns_query qu,
+		    adns_queryflags flags, struct timeval now)
+{
+  adns_status st;
+  int id;
+  qcontext ctx;
+  adns_query nqu;
+  vbuf vb;
+
+  assert(flags & adns__qf_ip_mask);
+  
+  /* Must have a non-negative id, or else adns__internal_check will
+   * think that we are on the output queue. */
+  qu->id = 0;
+  
+  ctx.ext= 0;
+  ctx.callback= icb_addr;
+  /* What to store in ctx.info? */
+
+  adns__vbuf_init(&vb);
+
+  if (flags & adns_qf_ip4) { /* A query */
+    st= adns__mkquery_frlabels(qu->ads, &vb, &id, 
+			       qu->vb.buf, qu->vb.used, adns_r_a, flags);
+    if (st) { adns__query_fail(qu, st); return; }
+    
+    st= adns__internal_submit(qu->ads, &nqu, adns__findtype(adns_r_a),
+			      &vb, id, flags, now, &ctx);
+    if (st) { adns__query_fail(qu, st); return; }
+    
+    nqu->parent = qu;
+    LIST_LINK_TAIL_PART(qu->children,nqu,siblings.);
+  }
+
+  if (flags & adns_qf_ip6) { /* AAAA query */
+    st= adns__mkquery_frlabels(qu->ads, &vb, &id, 
+			       qu->vb.buf, qu->vb.used, adns_r_aaaa, flags);
+    if (st) { adns__query_fail(qu, st); return; }
+    
+    st= adns__internal_submit(qu->ads, &nqu, adns__findtype(adns_r_aaaa),
+			      &vb, id, flags, now, &ctx);
+    if (st) { adns__query_fail(qu, st); return; }
+    
+    nqu->parent = qu;
+    LIST_LINK_TAIL_PART(qu->children,nqu,siblings.);
+  }
+  assert(qu->children.head);
+}
+
+static adns_status pap_addr(const parseinfo *pai, adns_rrtype type, int cbyte,
+			    int max, adns_rr_addr *rr) {
+  
   const byte *dgram= pai->dgram;
+  adns_queryflags flags = pai->qu->flags;
+  
+  switch (type)
+  {
+  default: abort();
+  case adns_r_a:
+    assert(flags & adns_qf_ip4);
 
   if (max-cbyte != 4) return adns_s_invaliddata;
-  storeto->len= sizeof(storeto->addr.inet);
-  memset(&storeto->addr,0,sizeof(storeto->addr.inet));
-  storeto->addr.inet.sin_family= AF_INET;
-  memcpy(&storeto->addr.inet.sin_addr,dgram+cbyte,4);
+    
+    if (flags & adns_qf_ip6mapped) {
+      rr->len = sizeof(struct sockaddr_in6);
+      mk_mapped_ipv6(&rr->addr.inet6, (const struct in_addr *) (dgram+cbyte));
+    }
+    else {
+      rr->len= sizeof(rr->addr.inet);
+      memset(&rr->addr.inet,0,sizeof(rr->addr.inet));
+      rr->addr.inet.sin_family= AF_INET;
+      memcpy(&rr->addr.inet.sin_addr,dgram+cbyte,4);
+    }
+    break;
+  case adns_r_aaaa:
+    assert(flags & adns_qf_ip6);
+    
+    if (max-cbyte != 16) return adns_s_invaliddata;
+    
+    rr->len= sizeof(rr->addr.inet6);
+    memset(&rr->addr,0,sizeof(rr->addr.inet6));
+    rr->addr.inet6.sin6_family= AF_INET6;
+    memcpy(&rr->addr.inet6.sin6_addr,dgram+cbyte,16);
+
+    break;
+  }
+  
   return adns_s_ok;
+}
+
+static int search_sortlist_addr(adns_state ads, const adns_rr_addr *ad) {
+  switch(ad->addr.sa.sa_family) {
+  default: abort();
+  case AF_INET: return search_sortlist_in(ads, ad->addr.inet.sin_addr);
+  case AF_INET6: return search_sortlist_in6(ads, &ad->addr.inet6.sin6_addr);
+  }
+}
+
+static int dip_addr(adns_state ads,
+		    const adns_rr_addr *a, const adns_rr_addr *b) {
+  int ai, bi;
+  ai = search_sortlist_addr(ads, a);
+  bi = search_sortlist_addr(ads, b);
+  return bi<ai;
 }
 
 static int di_addr(adns_state ads, const void *datap_a, const void *datap_b) {
   const adns_rr_addr *ap= datap_a, *bp= datap_b;
-
-  assert(ap->addr.sa.sa_family == AF_INET);
-  return dip_inaddr(ads, ap->addr.inet.sin_addr, bp->addr.inet.sin_addr);
+  return dip_addr(ads, ap, bp);
 }
 
 static int div_addr(void *context, const void *datap_a, const void *datap_b) {
@@ -320,12 +599,18 @@ static int div_addr(void *context, const void *datap_a, const void *datap_b) {
 
 static adns_status csp_addr(vbuf *vb, const adns_rr_addr *rrp) {
   const char *ia;
-  char buf[30];
+  char buf[INET6_ADDRSTRLEN];
 
   switch (rrp->addr.inet.sin_family) {
   case AF_INET:
     CSP_ADDSTR("INET ");
     ia= inet_ntoa(rrp->addr.inet.sin_addr); assert(ia);
+    CSP_ADDSTR(ia);
+    break;
+  case AF_INET6:
+    CSP_ADDSTR("INET6 ");
+    ia= inet_ntop(AF_INET6, &rrp->addr.inet6.sin6_addr,
+		  buf, sizeof(buf)); assert(ia);
     CSP_ADDSTR(ia);
     break;
   default:
@@ -424,17 +709,22 @@ static adns_status pap_findaddrs(const parseinfo *pai, adns_rr_hostaddr *ha,
 			    &type, &class, &ttl, &rdlen, &rdstart,
 			    pai->dgram, pai->dglen, dmstart, &ownermatched);
     if (st) return st;
-    if (!ownermatched || class != DNS_CLASS_IN || type != adns_r_a) {
+    if (!ownermatched || class != DNS_CLASS_IN) {
       if (naddrs>0) break; else continue;
     }
+    if (! ((type == adns_r_a && (pai->qu->flags & adns_qf_ip4))
+	   || (type == adns_r_aaaa && (pai->qu->flags & adns_qf_ip6)))) {
+      if (naddrs>0) break; else continue;
+    }
+    
     if (naddrs == -1) {
       naddrs= 0;
     }
     if (!adns__vbuf_ensure(&pai->qu->vb, (naddrs+1)*sizeof(adns_rr_addr)))
       R_NOMEM;
     adns__update_expires(pai->qu,ttl,pai->now);
-    st= pa_addr(pai, rdstart,rdstart+rdlen,
-		pai->qu->vb.buf + naddrs*sizeof(adns_rr_addr));
+    st= pap_addr(pai, type, rdstart,rdstart+rdlen,
+		 (adns_rr_addr *) pai->qu->vb.buf + naddrs);
     if (st) return st;
     naddrs++;
   }
@@ -476,7 +766,6 @@ static adns_status pap_hostaddr(const parseinfo *pai, int *cbyte_io,
   adns_status st;
   int dmstart, cbyte;
   qcontext ctx;
-  int id;
   adns_query nqu;
   adns_queryflags nflags;
 
@@ -500,9 +789,8 @@ static adns_status pap_hostaddr(const parseinfo *pai, int *cbyte_io,
   if (st) return st;
   if (rrp->naddrs != -1) return adns_s_ok;
 
-  st= adns__mkquery_frdgram(pai->ads, &pai->qu->vb, &id,
-			    pai->dgram, pai->dglen, dmstart,
-			    adns_r_addr, adns_qf_quoteok_query);
+  st= adns__mkquery_labels_frdgram(pai->ads, &pai->qu->vb,
+				   pai->dgram, pai->dglen, dmstart);
   if (st) return st;
 
   ctx.ext= 0;
@@ -513,7 +801,7 @@ static adns_status pap_hostaddr(const parseinfo *pai, int *cbyte_io,
   if (!(pai->qu->flags & adns_qf_cname_loose)) nflags |= adns_qf_cname_forbid;
   
   st= adns__internal_submit(pai->ads, &nqu, adns__findtype(adns_r_addr),
-			    &pai->qu->vb, id, nflags, pai->now, &ctx);
+			    &pai->qu->vb, 0, nflags, pai->now, &ctx);
   if (st) return st;
 
   nqu->parent= pai->qu;
@@ -539,11 +827,7 @@ static int dip_hostaddr(adns_state ads,
   if (ap->astatus != bp->astatus) return ap->astatus;
   if (ap->astatus) return 0;
 
-  assert(ap->addrs[0].addr.sa.sa_family == AF_INET);
-  assert(bp->addrs[0].addr.sa.sa_family == AF_INET);
-  return dip_inaddr(ads,
-		    ap->addrs[0].addr.inet.sin_addr,
-		    bp->addrs[0].addr.inet.sin_addr);
+  return dip_addr(ads, &ap->addrs[0], &bp->addrs[0]);
 }
 
 static int di_hostaddr(adns_state ads,
@@ -717,7 +1001,7 @@ static void icb_ptr(adns_query parent, adns_query child) {
     return;
   }
 
-  queried= &parent->ctx.info.ptr_parent_addr;
+  queried= &parent->extra.info.ptr_addr;
   for (i=0, found=cans->rrs.addr; i<cans->nrrs; i++, found++) {
     if (queried->len == found->len &&
 	!memcmp(&queried->addr,&found->addr,queried->len)) {
@@ -734,18 +1018,14 @@ static void icb_ptr(adns_query parent, adns_query child) {
   adns__query_fail(parent,adns_s_inconsistent);
 }
 
+/* FIXME: Completely different in adns-1.4. */
 static adns_status pa_ptr(const parseinfo *pai, int dmstart,
 			  int max, void *datap) {
   static const char *const (expectdomain[])= { DNS_INADDR_ARPA };
   
   char **rrp= datap;
   adns_status st;
-  adns_rr_addr *ap;
-  findlabel_state fls;
-  char *ep;
-  byte ipv[4];
-  char labbuf[4];
-  int cbyte, i, lablen, labstart, l, id;
+  int cbyte;
   adns_query nqu;
   qcontext ctx;
 
@@ -755,48 +1035,20 @@ static adns_status pa_ptr(const parseinfo *pai, int dmstart,
   if (st) return st;
   if (cbyte != max) return adns_s_invaliddata;
 
-  ap= &pai->qu->ctx.info.ptr_parent_addr;
-  if (!ap->len) {
-    adns__findlabel_start(&fls, pai->ads, -1, pai->qu,
-			  pai->qu->query_dgram, pai->qu->query_dglen,
-			  pai->qu->query_dglen, DNS_HDRSIZE, 0);
-    for (i=0; i<4; i++) {
-      st= adns__findlabel_next(&fls,&lablen,&labstart); assert(!st);
-      if (lablen<=0 || lablen>3) return adns_s_querydomainwrong;
-      memcpy(labbuf, pai->qu->query_dgram + labstart, lablen);
-      labbuf[lablen]= 0;
-      ipv[3-i]= strtoul(labbuf,&ep,10);
-      if (*ep) return adns_s_querydomainwrong;
-      if (lablen>1 && pai->qu->query_dgram[labstart]=='0')
-	return adns_s_querydomainwrong;
-    }
-    for (i=0; i<sizeof(expectdomain)/sizeof(*expectdomain); i++) {
-      st= adns__findlabel_next(&fls,&lablen,&labstart); assert(!st);
-      l= strlen(expectdomain[i]);
-      if (lablen != l ||
-	  memcmp(pai->qu->query_dgram + labstart, expectdomain[i], l))
-	return adns_s_querydomainwrong;
-    }
-    st= adns__findlabel_next(&fls,&lablen,0); assert(!st);
-    if (lablen) return adns_s_querydomainwrong;
-    
-    ap->len= sizeof(struct sockaddr_in);
-    memset(&ap->addr,0,sizeof(ap->addr.inet));
-    ap->addr.inet.sin_family= AF_INET;
-    ap->addr.inet.sin_addr.s_addr=
-      htonl((ipv[0]<<24) | (ipv[1]<<16) | (ipv[2]<<8) | (ipv[3]));
-  }
+  /* Should be initialized by adns_submit_reverse. If it's not, we
+   * can't do any consistency checking. */
+  if (!pai->qu->extra.info.ptr_addr.len) return adns_s_ok;
 
-  st= adns__mkquery_frdgram(pai->ads, &pai->qu->vb, &id,
-			    pai->dgram, pai->dglen, dmstart,
-			    adns_r_addr, adns_qf_quoteok_query);
+  pai->qu->vb.used = 0;
+  st= adns__mkquery_labels_frdgram(pai->ads, &pai->qu->vb,
+				   pai->dgram, pai->dglen, dmstart);
   if (st) return st;
 
   ctx.ext= 0;
   ctx.callback= icb_ptr;
   memset(&ctx.info,0,sizeof(ctx.info));
   st= adns__internal_submit(pai->ads, &nqu, adns__findtype(adns_r_addr),
-			    &pai->qu->vb, id,
+			    &pai->qu->vb, 0,
 			    adns_qf_quoteok_query, pai->now, &ctx);
   if (st) return st;
 
@@ -1250,13 +1502,16 @@ static void mf_flat(adns_query qu, void *data) { }
 
 #define DEEP_TYPE(code,rrt,fmt,memb,parser,comparer,printer)	\
  { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_##memb,		\
-      printer,parser,comparer, adns__qdpl_normal,0 }
+     printer,0,parser,comparer, adns__qdpl_normal,0 }
 #define FLAT_TYPE(code,rrt,fmt,memb,parser,comparer,printer)	\
  { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_flat,		\
-     printer,parser,comparer, adns__qdpl_normal,0 }
+     printer,0,parser,comparer, adns__qdpl_normal,0 }
 #define XTRA_TYPE(code,rrt,fmt,memb,parser,comparer,printer,qdpl,postsort) \
  { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_##memb,			   \
-    printer,parser,comparer,qdpl,postsort }
+     printer,0,parser,comparer,qdpl,postsort }
+#define SPECIAL_TYPE(code,rrt,fmt,memb,submit,comparer,printer) \
+ { adns_r_##code, rrt,fmt,TYPESZ_M(memb), mf_flat,		\
+   printer,submit,0,comparer, adns__qdpl_normal,0 }
 
 static const typeinfo typeinfos[] = {
 /* Must be in ascending order of rrtype ! */
@@ -1271,10 +1526,11 @@ DEEP_TYPE(hinfo,  "HINFO", 0, intstrpair,pa_hinfo,   0,        cs_hinfo      ),
 DEEP_TYPE(mx_raw, "MX",   "raw",intstr,  pa_mx_raw,  di_mx_raw,cs_inthost    ),
 DEEP_TYPE(txt,    "TXT",   0,   manyistr,pa_txt,     0,        cs_txt        ),
 DEEP_TYPE(rp_raw, "RP",   "raw",strpair, pa_rp,      0,        cs_rp         ),
+FLAT_TYPE(aaaa,   "AAAA",   0,  in6addr, pa_in6addr, di_in6addr, cs_in6addr  ),
 XTRA_TYPE(srv_raw,"SRV",  "raw",srvraw , pa_srvraw,  di_srv,   cs_srvraw,
 	                                               qdpl_srv, postsort_srv),
 
-FLAT_TYPE(addr,   "A",  "addr", addr,    pa_addr,    di_addr,  cs_addr       ),
+/* adns__qtf_deref set */
 DEEP_TYPE(ns,     "NS", "+addr",hostaddr,pa_hostaddr,di_hostaddr,cs_hostaddr ),
 DEEP_TYPE(ptr,    "PTR","checked",str,   pa_ptr,     0,        cs_domain     ),
 DEEP_TYPE(mx,     "MX", "+addr",inthostaddr,pa_mx,   di_mx,    cs_inthostaddr),
@@ -1283,6 +1539,9 @@ XTRA_TYPE(srv,    "SRV","+addr",srvha,   pa_srvha,   di_srv,   cs_srvha,
 
 DEEP_TYPE(soa,    "SOA","822",  soa,     pa_soa,     0,        cs_soa        ),
 DEEP_TYPE(rp,     "RP", "822",  strpair, pa_rp,      0,        cs_rp         ),
+
+/* adns__qtf_special set */
+SPECIAL_TYPE(addr,"<A+AAAA>", "addr",addr,sh_addr,   di_addr,  cs_addr       ),
 };
 
 static const typeinfo typeinfo_unknown=
