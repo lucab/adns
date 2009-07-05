@@ -32,6 +32,8 @@ int ov_verbose= 0;
 adns_rrtype ov_type= adns_r_none;
 int ov_search=0, ov_qc_query=0, ov_qc_anshost=0, ov_qc_cname=1;
 int ov_tcp=0, ov_cname=0, ov_format=fmt_default;
+int ov_ipflags=0;
+int ov_ip6mapped=0;
 char *ov_id= 0;
 struct perqueryflags_remember ov_pqfr = { 1,1,1, tm_none };
 
@@ -113,6 +115,16 @@ static const struct optioninfo perquery_options[]= {
     "Cl", "cname-loose",   &ov_cname, adns_qf_cname_loose },
   { ot_value,            "CNAME ok for query domain, but not in RRs (default)",
     "Cs", "cname-ok",      &ov_cname, 0 },
+  
+  { ot_desconly, "per-query IPv6 mode:" },
+  { ot_value,            "Ask only for IPv6 addresses",
+    "I6", "ip6-only", &ov_ipflags, adns_qf_ip6 },
+  { ot_value,            "Ask only for IPv4 addresses",
+    "I4", "ip4-only", &ov_ipflags, adns_qf_ip4 },
+  { ot_value,            "Ask for both IPv4 and IPv6 addresses (default)",
+    "IX", "ipv6-mixed", &ov_ipflags, adns_qf_ip4|adns_qf_ip6 },
+  { ot_value,            "Ask for both IPv4 and IPv6 addresses, using IPv4-mapped IPv6 addresses",
+    "IM", "ipv6-mapped", &ov_ip6mapped, adns_qf_ip6mapped },
   
   { ot_desconly, "asynchronous/pipe mode options:" },
   { ot_funcarg,          "Set <id>, default is decimal sequence starting 0",
