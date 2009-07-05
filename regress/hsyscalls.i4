@@ -70,7 +70,7 @@ hm_syscall(
 
 hm_syscall(
 	socket, `hm_rv_fd', `
-	hm_arg_must(int,domain,AF_INET) hm_na
+	hm_arg_ign(int,domain) hm_na
 	hm_arg_socktype(type) hm_na
 	hm_arg_ign(int,protocol) hm_na
 ')

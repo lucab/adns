@@ -144,10 +144,18 @@ void Qwrite(	int fd , const void *buf , size_t len 	) {
   Q_vb();
 }
 void Tvbaddr(const struct sockaddr *addr, int len) {
-  const struct sockaddr_in *ai= (const struct sockaddr_in*)addr;
-  assert(len==sizeof(struct sockaddr_in));
-  assert(ai->sin_family==AF_INET);
-  Tvbf("%s:%u",inet_ntoa(ai->sin_addr),htons(ai->sin_port));
+  if(addr->sa_family==AF_INET) {
+    const struct sockaddr_in *ai= (const struct sockaddr_in*)addr;
+    assert(len==sizeof(struct sockaddr_in));
+    assert(ai->sin_family==AF_INET);
+    Tvbf("%s:%u",inet_ntoa(ai->sin_addr),htons(ai->sin_port));
+  } else {
+    char buf[INET6_ADDRSTRLEN];
+    const struct sockaddr_in6 *ai6= (const struct sockaddr_in6*)addr;
+    assert(len==sizeof(struct sockaddr_in6));
+    assert(ai6->sin6_family==AF_INET6);
+    Tvbf("%s:%u",inet_ntop(AF_INET6, &(ai6->sin6_addr), buf, sizeof(buf)),htons(ai6->sin6_port));
+  }
 }
 void Tvbbytes(const void *buf, int len) {
   const byte *bp;

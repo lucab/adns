@@ -153,22 +153,42 @@ static void Ppollfds(struct pollfd *fds, int nfds) {
 }
 #endif
 static void Paddr(struct sockaddr *addr, int *lenr) {
+  struct sockaddr_in6 *sa6= (struct sockaddr_in6*)addr;
   struct sockaddr_in *sa= (struct sockaddr_in*)addr;
   char *p, *ep;
   long ul;
   assert(*lenr >= sizeof(*sa));
-  p= strchr(vb2.buf+vb2.used,':');
-  if (!p) Psyntax("no port on address");
-  *p++= 0;
   memset(sa,0,sizeof(*sa));
-  sa->sin_family= AF_INET;
-  if (!inet_aton(vb2.buf+vb2.used,&sa->sin_addr)) Psyntax("invalid address");
-  ul= strtoul(p,&ep,10);
-  if (*ep && *ep != ' ') Psyntax("invalid port (bad syntax)");
-  if (ul >= 65536) Psyntax("port too large");
-  sa->sin_port= htons(ul);
-  *lenr= sizeof(*sa);
-  vb2.used= ep - (char*)vb2.buf;
+  if (!inet_aton(vb2.buf+vb2.used,&sa->sin_addr)){  
+    p= strchr(vb2.buf+vb2.used,':');
+    if (!p) Psyntax("no port on address");
+    *p++= 0;
+    sa->sin_family= AF_INET;
+    ul= strtoul(p,&ep,10);
+    if (*ep && *ep != ' ') Psyntax("invalid port (bad syntax)");
+    if (ul >= 65536) Psyntax("port too large");
+    sa->sin_port= htons(ul);
+    *lenr= sizeof(*sa);
+    vb2.used= ep - (char*)vb2.buf;
+    return;
+    } else {
+    assert(*lenr >= sizeof(*sa6));
+    memset(sa6,0,sizeof(*sa6));
+    if (!inet_pton(AF_INET6, vb2.buf+vb2.used, &sa6->sin6_addr)) {
+      p= strrchr(vb2.buf+vb2.used,':');
+      if (!p) Psyntax("no port on address");
+      *p++= 0;
+      sa6->sin6_family= AF_INET6;
+      ul= strtoul(p,&ep,10);
+      if (*ep && *ep != ' ') Psyntax("invalid port (bad syntax)");
+      if (ul >= 65536) Psyntax("port too large");
+      sa6->sin6_port= htons(ul);
+      *lenr= sizeof(*sa6);
+      vb2.used= ep - (char*)vb2.buf;
+      return;
+      }
+    }
+  Psyntax("invalid address"); 
 }
 static int Pbytes(byte *buf, int maxlen) {
   static const char hexdigits[]= "0123456789abcdef";
@@ -283,7 +303,6 @@ int Hpoll(	struct pollfd *fds , int nfds , int timeout 	) {
 int Hsocket(	int domain , int type , int protocol 	) {
  int r, amtread;
  char *ep;
-	Tmust("socket","domain",domain==AF_INET); 
   Tmust("socket","type",type==SOCK_STREAM || type==SOCK_DGRAM); 
  Qsocket(	 type 	);
  if (!adns__vbuf_ensure(&vb2,1000)) Tnomem();
