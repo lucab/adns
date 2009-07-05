@@ -830,7 +830,7 @@ int adns_beforepoll(adns_state ads, struct pollfd *fds,
  * In any case this call won't block.
  */
 
-#define ADNS_POLLFDS_RECOMMENDED 2
+#define ADNS_POLLFDS_RECOMMENDED 3
 /* If you allocate an fds buf with at least RECOMMENDED entries then
  * you are unlikely to need to enlarge it.  You are recommended to do
  * so if it's convenient.  However, you must be prepared for adns to

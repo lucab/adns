@@ -320,31 +320,34 @@ void adns_processtimeouts(adns_state ads, const struct timeval *now) {
 int adns__pollfds(adns_state ads, struct pollfd pollfds_buf[MAX_POLLFDS]) {
   /* Returns the number of entries filled in.  Always zeroes revents. */
 
-  assert(MAX_POLLFDS==2);
-  if (ads->udpsocket >= 0)
+  assert(MAX_POLLFDS==3);
+  if (ads->udpsocket >= 0) {
     pollfds_buf[0].fd= ads->udpsocket;
-  else if(ads->udpsocket6 >= 0)
-    pollfds_buf[0].fd= ads->udpsocket6;
-
-  pollfds_buf[0].events= POLLIN;
-  pollfds_buf[0].revents= 0;
+    pollfds_buf[0].events= POLLIN;
+    pollfds_buf[0].revents= 0;
+  }
+  if(ads->udpsocket6 >= 0) {
+    pollfds_buf[1].fd= ads->udpsocket6;
+    pollfds_buf[1].events= POLLIN;
+    pollfds_buf[1].revents= 0;
+  }
 
   switch (ads->tcpstate) {
   case server_disconnected:
   case server_broken:
-    return 1;
+    return 2;
   case server_connecting:
-    pollfds_buf[1].events= POLLOUT;
+    pollfds_buf[2].events= POLLOUT;
     break;
   case server_ok:
-    pollfds_buf[1].events=
+    pollfds_buf[2].events=
       ads->tcpsend.used ? POLLIN|POLLOUT|POLLPRI : POLLIN|POLLPRI;
     break;
   default:
     abort();
   }
-  pollfds_buf[1].fd= ads->tcpsocket;
-  return 2;
+  pollfds_buf[2].fd= ads->tcpsocket;
+  return 3;
 }
 
 int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
@@ -474,7 +477,7 @@ int adns_processreadable(adns_state ads, int fd, const struct timeval *now) {
       }
       for (serv= 0;
 	   serv < ads->nservers &&
-             ads->servers[serv].addr6.s6_addr != udpaddr6.sin6_addr.s6_addr;
+	    (memcmp(&(ads->servers[serv].addr6.s6_addr), &(udpaddr6.sin6_addr.s6_addr), sizeof(struct in6_addr)));
            serv++);
       if (serv >= ads->nservers) {
 	char buf_dst[INET6_ADDRSTRLEN];
