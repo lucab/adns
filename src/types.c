@@ -1021,8 +1021,6 @@ static void icb_ptr(adns_query parent, adns_query child) {
 /* FIXME: Completely different in adns-1.4. */
 static adns_status pa_ptr(const parseinfo *pai, int dmstart,
 			  int max, void *datap) {
-  static const char *const (expectdomain[])= { DNS_INADDR_ARPA };
-  
   char **rrp= datap;
   adns_status st;
   int cbyte;
