@@ -56,9 +56,9 @@ dist_tmp=dist_tmp/adns-$(DISTVERSION)
 dist:			distprep
 	rm -rf dist_tmp*
 	mkdir dist_tmp $(dist_tmp)
-	find \( -name CVS -o -name dist_tmp* \) -prune -o -type d -print | \
+	find . \( -name CVS -o -name dist_tmp* \) -prune -o -type d -print | \
 		sed -e 's#.*#mkdir -p $(dist_tmp)/&#' | sh
-	find \( -name CVS -o -name dist_tmp* \) -prune -o -type f -print | \
+	find . \( -name CVS -o -name dist_tmp* \) -prune -o -type f -print | \
 		sed -e 's#.*#ln & $(dist_tmp)/&#' | sh
 	$(MAKE) -C dist_tmp/adns-$(DISTVERSION) distclean
 	cd dist_tmp && tar cf ../$(dist_tmp).tar `basename $(dist_tmp)`
