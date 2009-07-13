@@ -3,13 +3,25 @@ adnstest default
  start 951955261.286712
  socket type=SOCK_DGRAM
  socket=4
+ +0.000066
+ socket type=SOCK_DGRAM
+ socket=7
  +0.000128
  fcntl fd=4 cmd=F_GETFL
  fcntl=~O_NONBLOCK&...
  +0.000053
  fcntl fd=4 cmd=F_SETFL O_NONBLOCK|...
  fcntl=OK
+ +0.000264
+ fcntl fd=7 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000087
+ fcntl fd=7 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
  +0.000033
  close fd=4
+ close=OK
+ +0.000067
+ close fd=7
  close=OK
  +0.000238
