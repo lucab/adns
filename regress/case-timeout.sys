@@ -3,11 +3,20 @@ adnstest noserver
  start 912889153.349504
  socket type=SOCK_DGRAM
  socket=4
+ +0.000066
+ socket type=SOCK_DGRAM
+ socket=7
  +0.000193
  fcntl fd=4 cmd=F_GETFL
  fcntl=~O_NONBLOCK&...
  +0.000088
  fcntl fd=4 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000264
+ fcntl fd=7 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000087
+ fcntl fd=7 cmd=F_SETFL O_NONBLOCK|...
  fcntl=OK
  +0.000072
  sendto fd=4 addr=172.18.45.36:53
@@ -15,7 +24,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000617
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999383
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999383
  select=0 rfds=[] wfds=[] efds=[]
  +2.008683
  sendto fd=4 addr=172.18.45.36:53
@@ -23,7 +32,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000406
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999594
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999594
  select=0 rfds=[] wfds=[] efds=[]
  +2.009544
  sendto fd=4 addr=172.18.45.36:53
@@ -31,7 +40,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000428
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999572
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999572
  select=0 rfds=[] wfds=[] efds=[]
  +2.009567
  sendto fd=4 addr=172.18.45.36:53
@@ -39,7 +48,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000449
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999551
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999551
  select=0 rfds=[] wfds=[] efds=[]
  +2.009551
  sendto fd=4 addr=172.18.45.36:53
@@ -47,7 +56,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000381
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999619
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999619
  select=0 rfds=[] wfds=[] efds=[]
  +2.009614
  sendto fd=4 addr=172.18.45.36:53
@@ -55,7 +64,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000383
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999617
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999617
  select=0 rfds=[] wfds=[] efds=[]
  +2.009622
  sendto fd=4 addr=172.18.45.36:53
@@ -63,7 +72,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000387
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999613
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999613
  select=0 rfds=[] wfds=[] efds=[]
  +2.009603
  sendto fd=4 addr=172.18.45.36:53
@@ -71,7 +80,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000404
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999596
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999596
  select=0 rfds=[] wfds=[] efds=[]
  +2.009607
  sendto fd=4 addr=172.18.45.36:53
@@ -79,7 +88,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000468
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999532
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999532
  select=0 rfds=[] wfds=[] efds=[]
  +2.009526
  sendto fd=4 addr=172.18.45.36:53
@@ -87,7 +96,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000431
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999569
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999569
  select=0 rfds=[] wfds=[] efds=[]
  +2.009564
  sendto fd=4 addr=172.18.45.36:53
@@ -95,7 +104,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000429
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999571
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999571
  select=0 rfds=[] wfds=[] efds=[]
  +2.009586
  sendto fd=4 addr=172.18.45.36:53
@@ -103,7 +112,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000479
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999521
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999521
  select=0 rfds=[] wfds=[] efds=[]
  +2.009511
  sendto fd=4 addr=172.18.45.36:53
@@ -111,7 +120,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000430
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999570
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999570
  select=0 rfds=[] wfds=[] efds=[]
  +2.009571
  sendto fd=4 addr=172.18.45.36:53
@@ -119,7 +128,7 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000440
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999560
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999560
  select=0 rfds=[] wfds=[] efds=[]
  +2.009564
  sendto fd=4 addr=172.18.45.36:53
@@ -127,9 +136,12 @@ adnstest noserver
      02756b00 00010001.
  sendto=40
  +0.000439
- select max=5 rfds=[4] wfds=[] efds=[] to=1.999561
+ select max=8 rfds=[4,7] wfds=[] efds=[] to=1.999561
  select=0 rfds=[] wfds=[] efds=[]
  +2.009554
  close fd=4
+ close=OK
+ +0.000067
+ close fd=7
  close=OK
  +0.000267
